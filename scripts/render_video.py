@@ -46,7 +46,8 @@ def main():
     ap.add_argument("--offset",required=True,type=int); ap.add_argument("--resolution",default="480p")
     ap.add_argument("--out",required=True); a=ap.parse_args()
     p=json.loads(Path(a.project).read_text(encoding="utf-8"))
-    scenes=p.get("scenes") or ["Opening","A surprising problem","Action and comic twist","Final reveal"]
+    plan=p.get("animation_plan") or []
+    scenes=[(str(x.get("title","Scene"))+" — "+str(x.get("description","")))[:600] for x in plan] if plan else (p.get("scenes") or ["Opening","A surprising problem","Action and comic twist","Final reveal"])
     dialogue=p.get("dialogue") or []; total=max(1,int(p.get("duration_minutes",1))*60)
     duration=max(1,a.duration); offset=max(0,a.offset)
     width,height=(1280,720) if a.resolution=="720p" else (854,480)
@@ -91,7 +92,12 @@ def main():
                     en=f"between(t,{max(0,start):.3f},{min(duration,end):.3f})"
                     draw(f"dialogue_{i}",textwrap.fill(caption,54)[:500],"h*0.86",int(height*.027),font=myanmar,enable=en,box="0x000000@0.68")
         filters.append(f"[{chain}]drawbox=x=36:y=ih-20:w='(iw-72)*min(1,(t+{offset})/{total})':h=7:color=0xe9c46a@0.95:t=fill[vout]")
-        bg=palette[(offset//max(1,int(span)))%len(palette)]
+        if plan:
+            scene_index=min(len(plan)-1,int((offset/max(1,total))*len(plan)))
+            raw_bg=str(plan[scene_index].get("background","#142b2a"))
+            bg="0x"+raw_bg.lstrip("#") if len(raw_bg)==7 and raw_bg.startswith("#") else palette[scene_index%len(palette)]
+        else:
+            bg=palette[(offset//max(1,int(span)))%len(palette)]
         run(["ffmpeg","-y","-hide_banner","-loglevel","error",
              "-f","lavfi","-i",f"color=c={bg}:s={width}x{height}:r=24:d={duration}",
              "-loop","1","-framerate","24","-i",str(mascot),
