@@ -71,7 +71,16 @@ jobs:
           if len(raw) > 45000:
               raise SystemExit("Project JSON exceeds the APK input limit.")
           print("Project valid:", p.get("title","Untitled"), "| scenes:", len(p["scenes"]))
+          code=p.get("animation_code","")
+          if code and (not isinstance(code,str) or len(code)>24000): raise SystemExit("animation_code must be a string <= 24000 characters")
           PY
+
+      - name: Execute AI animation code in restricted JavaScript sandbox
+        run: |
+          set -euo pipefail
+          node --version
+          node scripts/animation_runtime.js project.json output/project.normalized.json
+          python -c "import json; p=json.load(open(\"output/project.normalized.json\")); print(\"Sandbox scenes:\",len(p.get(\"animation_plan\",[]))); assert p.get(\"animation_plan\")"
 
       - name: Restore completed render segments
         uses: actions/cache@v4
@@ -102,7 +111,7 @@ jobs:
             for ATTEMPT in 1 2 3; do
               echo "Segment $INDEX attempt $ATTEMPT/3"
               if python scripts/render_video.py \
-                --project project.json \
+                --project output/project.normalized.json \
                 --duration "$SEGMENT_SECONDS" \
                 --offset "$OFFSET" \
                 --resolution "$RESOLUTION" \
