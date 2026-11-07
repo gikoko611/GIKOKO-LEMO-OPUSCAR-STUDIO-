@@ -66,6 +66,13 @@ jobs:
             "$RUNNER_TEMP/gikoko-full-pipeline-smoke.mp4"
           ffprobe -v error -show_entries format=duration \
             -of default=noprint_wrappers=1 "$RUNNER_TEMP/gikoko-full-pipeline-smoke.mp4"
+      - name: Upload end-to-end render smoke test
+        uses: actions/upload-artifact@v4
+        with:
+          name: GIKOKO-RENDER-SMOKE-TEST
+          path: ${{ runner.temp }}/gikoko-full-pipeline-smoke.mp4
+          if-no-files-found: error
+          retention-days: 3
       - name: Install Gradle 8.9
         run: |
           curl -L --fail --retry 3 https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip"
