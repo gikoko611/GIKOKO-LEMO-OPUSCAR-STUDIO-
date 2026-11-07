@@ -42,10 +42,10 @@ public class MainActivity extends Activity {
     private static final String TOKEN_KEY="encrypted_pat";
     private static final String RUN_KEY="last_run_id";
     private final Handler main=new Handler(Looper.getMainLooper());
-    private EditText tokenInput;
+    private EditText tokenInput,aiBaseInput,aiModelInput,aiKeyInput,titleInput,promptInput,characterInput,sceneInput,dialogueInput;
     private Spinner styleSpinner,durationSpinner,resolutionSpinner;
     private TextView status;
-    private Button startButton,saveButton,checkButton,downloadButton;
+    private Button startButton,saveButton,checkButton,downloadButton;\n    private Spinner voiceSpinner;\n    private CheckBox musicCheck,sfxCheck,subtitleCheck;
     private String token;
     private boolean busy=false,pendingStart=false;
 
@@ -78,9 +78,31 @@ public class MainActivity extends Activity {
         saveButton=button(token==null?"SAVE TOKEN":"UPDATE TOKEN");root.addView(saveButton);saveButton.setOnClickListener(v->saveToken());
         Button clear=button("REMOVE SAVED TOKEN");root.addView(clear);clear.setOnClickListener(v->clearToken());
 
-        root.addView(label("1. FILM STYLE",16));styleSpinner=spinner(new String[]{"cartoon2d","cartoon3d","cinematic"});root.addView(styleSpinner);
-        root.addView(label("2. DURATION (MINUTES)",16));durationSpinner=spinner(new String[]{"1","5","10","30"});root.addView(durationSpinner);
-        root.addView(label("3. RESOLUTION",16));resolutionSpinner=spinner(new String[]{"480p","720p"});root.addView(resolutionSpinner);
+        root.addView(label("AI ASSISTANT — OPENAI-COMPATIBLE PROVIDER",16));
+        aiBaseInput=edit("https://api.openai.com/v1","API Base URL",false);root.addView(aiBaseInput);
+        aiModelInput=edit("gpt-4o-mini","Model ID",false);root.addView(aiModelInput);
+        aiKeyInput=edit("","AI API Key (optional; encrypted on device)",true);root.addView(aiKeyInput);
+        Button saveAi=button("SAVE AI PROVIDER");root.addView(saveAi);saveAi.setOnClickListener(v->saveAiProvider());
+        Button assist=button("✨ AI STORY ASSIST");root.addView(assist);assist.setOnClickListener(v->assistStory());
+
+        root.addView(label("STORY & TIMELINE ENGINE",18));
+        titleInput=edit("The Golden Kingdom","Film Title",false);root.addView(titleInput);
+        promptInput=edit("Write a funny adventure in an ancient Myanmar royal palace. Include an unexpected action-comedy twist.","Describe your film idea / Prompt",false);promptInput.setMinLines(3);root.addView(promptInput);
+        characterInput=edit("Main character: a clever but clumsy royal guard. Keep costume, face, colors and personality consistent in every scene.","Character Bible — fixed appearance and personality",false);characterInput.setMinLines(3);root.addView(characterInput);
+        sceneInput=edit("Palace courtyard — introduce the guard\nThrone room — a suspicious royal order\nPalace kitchen — comic chase\nRoyal hall — funny reveal","Scene Outline — one scene per line",false);sceneInput.setMinLines(4);root.addView(sceneInput);
+        dialogueInput=edit("Guard: I have everything under control. | အားလုံးကို ကျွန်တော် ထိန်းချုပ်ထားပါတယ်။\nKing: Then why is the palace on fire? | ဒါဆို နန်းတော်က ဘာလို့ မီးလောင်နေတာလဲ။","Dialogue — English | Myanmar per line",false);dialogueInput.setMinLines(4);root.addView(dialogueInput);
+        Button saveProject=button("SAVE PROJECT");root.addView(saveProject);saveProject.setOnClickListener(v->saveProject());
+
+        root.addView(label("AUDIO & SUBTITLE ENGINE",18));
+        voiceSpinner=spinner(new String[]{"No voice-over","English voice-over (provider required)","Myanmar voice-over (provider required)"});root.addView(voiceSpinner);
+        musicCheck=new CheckBox(this);musicCheck.setText("Background Music");musicCheck.setTextColor(Color.WHITE);musicCheck.setChecked(true);root.addView(musicCheck);
+        sfxCheck=new CheckBox(this);sfxCheck.setText("Sound Effects");sfxCheck.setTextColor(Color.WHITE);sfxCheck.setChecked(true);root.addView(sfxCheck);
+        subtitleCheck=new CheckBox(this);subtitleCheck.setText("Myanmar Subtitles (SRT track)");subtitleCheck.setTextColor(Color.WHITE);subtitleCheck.setChecked(true);root.addView(subtitleCheck);
+
+        root.addView(label("RENDER SETTINGS",18));
+        root.addView(label("Film Style",14));styleSpinner=spinner(new String[]{"cartoon2d","cartoon3d","cinematic"});root.addView(styleSpinner);
+        root.addView(label("Duration (minutes)",14));durationSpinner=spinner(new String[]{"1","5","10","30"});root.addView(durationSpinner);
+        root.addView(label("Resolution",14));resolutionSpinner=spinner(new String[]{"480p","720p"});root.addView(resolutionSpinner);
 
         startButton=button("▶ START RENDER");root.addView(startButton);startButton.setOnClickListener(v->{
             if(token==null){setStatus("Please save your Fine-grained GitHub token first.");return;}
@@ -90,7 +112,77 @@ public class MainActivity extends Activity {
         downloadButton=button("DOWNLOAD LATEST MP4");root.addView(downloadButton);downloadButton.setOnClickListener(v->downloadLastRun());
         status=label(token==null?"Status: Add your GitHub token to begin.":"Status: Ready — token encrypted on this device.",14);root.addView(status);
         root.addView(label("No GitHub Actions page is needed. The APK starts the workflow, checks status and downloads the MP4. Render time and GitHub usage limits apply. Artifacts expire after 7 days.",12));
-        setContentView(scroll);
+        setContentView(scroll);\n        restoreProject();\n        aiBaseInput.setText(prefs().getString("ai_base","https://api.openai.com/v1"));\n        aiModelInput.setText(prefs().getString("ai_model","gpt-4o-mini"));
+    }
+
+    private EditText edit(String value,String hint,boolean secret){
+        EditText e=new EditText(this);e.setText(value);e.setHint(hint);e.setTextColor(Color.WHITE);e.setHintTextColor(Color.GRAY);
+        e.setSingleLine(!hint.contains("Prompt")&&!hint.contains("Bible")&&!hint.contains("Outline")&&!hint.contains("Dialogue"));
+        e.setInputType(secret?(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD):(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES));
+        e.setPadding(12,10,12,10);return e;
+    }
+    private void saveAiProvider(){
+        String base=aiBaseInput.getText().toString().trim(),model=aiModelInput.getText().toString().trim(),key=aiKeyInput.getText().toString().trim();
+        if(!base.startsWith("https://")||model.isEmpty()){setStatus("AI provider needs an HTTPS Base URL and Model ID.");return;}
+        try{prefs().edit().putString("ai_base",base).putString("ai_model",model).apply();if(!key.isEmpty())prefs().edit().putString("ai_key_enc",encrypt(key)).apply();aiKeyInput.setText("");setStatus("AI provider settings saved. API key encrypted on device.");}
+        catch(Exception e){setStatus("Could not encrypt AI key: "+e.getMessage());}
+    }
+    private JSONObject buildProject(){
+        JSONObject p=new JSONObject();
+        try{
+            p.put("schema_version",1);p.put("title",titleInput.getText().toString().trim());
+            p.put("prompt",promptInput.getText().toString().trim());p.put("character_bible",characterInput.getText().toString().trim());
+            JSONArray scenes=new JSONArray();for(String line:sceneInput.getText().toString().split("\\n"))if(!line.trim().isEmpty())scenes.put(line.trim());p.put("scenes",scenes);
+            JSONArray dialogue=new JSONArray();for(String line:dialogueInput.getText().toString().split("\\n"))if(!line.trim().isEmpty()){
+                String[] parts=line.split("\\|",2);JSONObject d=new JSONObject();d.put("english",parts[0].trim());d.put("myanmar",parts.length>1?parts[1].trim():"");dialogue.put(d);
+            }p.put("dialogue",dialogue);
+            p.put("voice",voiceSpinner.getSelectedItem().toString());p.put("background_music",musicCheck.isChecked());p.put("sfx",sfxCheck.isChecked());p.put("myanmar_subtitles",subtitleCheck.isChecked());
+            p.put("style",styleSpinner.getSelectedItem().toString());p.put("duration_minutes",durationSpinner.getSelectedItem().toString());p.put("resolution",resolutionSpinner.getSelectedItem().toString());
+        }catch(Exception ignored){}return p;
+    }
+    private void saveProject(){
+        JSONObject p=buildProject();String raw=p.toString();prefs().edit().putString("last_project",raw).apply();setStatus("Project saved on this phone ("+raw.length()+" characters).");
+    }
+    private void restoreProject(){
+        String raw=prefs().getString("last_project",null);if(raw==null)return;
+        try{JSONObject p=new JSONObject(raw);titleInput.setText(p.optString("title",""));promptInput.setText(p.optString("prompt",""));characterInput.setText(p.optString("character_bible",""));
+            JSONArray a=p.optJSONArray("scenes");if(a!=null){StringBuilder b=new StringBuilder();for(int i=0;i<a.length();i++)b.append(a.getString(i)).append("\\n");sceneInput.setText(b.toString());}
+            JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\\n");}dialogueInput.setText(b.toString());}
+            musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("myanmar_subtitles",true));
+        }catch(Exception ignored){}
+    }
+    private void assistStory(){
+        if(busy)return;String prompt=promptInput.getText().toString().trim();if(prompt.isEmpty()){setStatus("Enter a film idea first.");return;}
+        String key=null;try{String enc=prefs().getString("ai_key_enc",null);if(enc!=null)key=decrypt(enc);}catch(Exception ignored){}
+        if(key==null||key.isEmpty()){offlineStoryAssist(prompt);return;}
+        final String apiKey=key,base=prefs().getString("ai_base","https://api.openai.com/v1"),model=prefs().getString("ai_model","gpt-4o-mini");
+        setBusy(true);setStatus("AI assistant is drafting the story, scenes and bilingual dialogue…");
+        new Thread(()->{
+            try{
+                JSONObject body=new JSONObject();body.put("model",model);body.put("temperature",0.7);
+                JSONArray msgs=new JSONArray();JSONObject sys=new JSONObject();sys.put("role","system");sys.put("content","You are a professional animation screenwriter. Return ONLY valid JSON with keys title, character_bible, scenes (array of 4-8 concise scene descriptions), dialogue (array of objects with english and myanmar). Preserve a single consistent character design. Keep dialogue concise and suitable for a short animated film.");
+                JSONObject usr=new JSONObject();usr.put("role","user");usr.put("content","Create a storyboard for this idea. Keep it visually renderable as a simple 2D/3D/cinematic motion-graphics sequence. Idea: "+prompt);
+                msgs.put(sys);msgs.put(usr);body.put("messages",msgs);
+                ApiResponse response=api("POST",base.replaceAll("/+$","")+"/chat/completions",apiKey,body.toString());
+                if(response.code<200||response.code>=300)throw new Exception("AI provider HTTP "+response.code+": "+response.body.substring(0,Math.min(500,response.body.length())));
+                JSONObject root=new JSONObject(response.body);String content=root.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content").trim();
+                content=content.replaceAll("^\\x60{3}json\\s*","").replaceAll("\\x60{3}\\s*$","");
+                JSONObject story=new JSONObject(content);
+                main.post(()->{
+                    titleInput.setText(story.optString("title","Untitled Story"));characterInput.setText(story.optString("character_bible",""));
+                    JSONArray sc=story.optJSONArray("scenes");StringBuilder sb=new StringBuilder();if(sc!=null)for(int i=0;i<sc.length();i++)sb.append(sc.optString(i)).append("\\n");sceneInput.setText(sb.toString());
+                    JSONArray ds=story.optJSONArray("dialogue");StringBuilder db=new StringBuilder();if(ds!=null)for(int i=0;i<ds.length();i++){JSONObject d=ds.optJSONObject(i);db.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\\n");}dialogueInput.setText(db.toString());
+                    setStatus("AI story draft ready. Review and edit every scene before rendering.");
+                });
+            }catch(Exception e){setStatus("AI assist error: "+e.getMessage());}
+            finally{setBusy(false);}
+        }).start();
+    }
+    private void offlineStoryAssist(String prompt){
+        String[] ideas=prompt.split("[.!?。！？]+");StringBuilder scenes=new StringBuilder();int count=0;
+        for(String idea:ideas){String v=idea.trim();if(v.isEmpty())continue;scenes.append("Scene ").append(++count).append(": ").append(v).append("\\n");if(count==6)break;}
+        if(count==0)scenes.append("Scene 1: Introduce the main character\\nScene 2: A surprising problem appears\\nScene 3: Action and comic twist\\nScene 4: Happy ending");
+        sceneInput.setText(scenes.toString());setStatus("Offline storyboard outline created. Add character details and bilingual dialogue; connect an AI provider for full AI writing.");
     }
 
     private void setStatus(String s){main.post(()->status.setText(s));}
@@ -177,7 +269,7 @@ public class MainActivity extends Activity {
         setBusy(true);setStatus("Sending render request to GitHub Actions…");
         new Thread(()->{
             try{
-                JSONObject inputs=new JSONObject();inputs.put("style",style);inputs.put("duration",duration);inputs.put("resolution",resolution);inputs.put("request_id",requestId);
+                JSONObject inputs=new JSONObject();inputs.put("style",style);inputs.put("duration",duration);inputs.put("resolution",resolution);inputs.put("request_id",requestId);\n                String project=buildProject().toString();\n                if(project.length()>45000)throw new Exception("Project is too large. Shorten the prompt/dialogue and try again.");\n                inputs.put("project_json",project);
                 JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
                 ApiResponse dispatched=api("POST",API+"/actions/workflows/"+WORKFLOW+"/dispatches",token,payload.toString());
                 if(dispatched.code!=204)throw new Exception("Workflow dispatch failed (HTTP "+dispatched.code+"): "+dispatched.body);
