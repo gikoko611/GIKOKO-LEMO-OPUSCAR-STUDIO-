@@ -45,7 +45,7 @@ def main():
             if "English" in voice_mode or "Bilingual" in voice_mode:
                 if en: speech.append((start,en,"en-US-GuyNeural"))
             if "Myanmar" in voice_mode or "Bilingual" in voice_mode:
-                if my: speech.append((start+(0.0 if "English" not in voice_mode else min(1.2,slot*.25)),my,"my-MM-ThihaNeural"))
+                if my: speech.append((start+(min(1.5,slot*.35) if "Bilingual" in voice_mode else 0.0),my,"my-MM-ThihaNeural"))
     if subtitles:
         with srt.open("w",encoding="utf-8") as f:
             for i,(a,b,text) in enumerate(entries,1):
@@ -82,7 +82,8 @@ def main():
     if sfx:
         # Short original per-scene impact accents, generated from a low sine oscillator.
         sfx_path=work/"sfx.wav"
-        expr=f"0.025*sin(2*PI*82*t)*if(lt(mod(t\\,{max(3,duration/max(1,len(project.get('scenes') or [1])))}),0.22),exp(-mod(t\\,{max(3,duration/max(1,len(project.get('scenes') or [1])))} )*12),0)"
+        period=max(3,duration/max(1,len(project.get("scenes") or [1])))
+        expr=f"0.025*sin(2*PI*82*t)*if(lt(mod(t\\\\,{period})\\\\,0.22)\\\\,exp(-mod(t\\\\,{period})*12)\\\\,0)"
         try:
             run(["ffmpeg","-y","-loglevel","error","-f","lavfi","-i",f"aevalsrc={expr}:s=48000:d={duration}","-c:a","pcm_s16le",str(sfx_path)])
             inputs += ["-i",str(sfx_path)]
