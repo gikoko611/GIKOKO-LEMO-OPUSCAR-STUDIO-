@@ -1,5 +1,5 @@
 name: G.I KO KO Cloud Render
-run-name: G.I KO KO Render - \${{ inputs.request_id }}
+run-name: G.I KO KO Render - ${{ inputs.request_id }}
 
 on:
   workflow_dispatch:
@@ -35,7 +35,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: lemo-opuscar-\${{ inputs.request_id }}
+  group: lemo-opuscar-${{ inputs.request_id }}
   cancel-in-progress: false
 
 jobs:
@@ -57,7 +57,7 @@ jobs:
 
       - name: Validate project input
         env:
-          PROJECT_JSON: \${{ inputs.project_json }}
+          PROJECT_JSON: ${{ inputs.project_json }}
         run: |
           set -euo pipefail
           mkdir -p output/segments
@@ -77,14 +77,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: output/segments
-          key: lemo-segments-\${{ inputs.request_id }}-\${{ runner.os }}-\${{ github.run_attempt }}
+          key: lemo-segments-${{ inputs.request_id }}-${{ runner.os }}-${{ github.run_attempt }}
           restore-keys: |
-            lemo-segments-\${{ inputs.request_id }}-\${{ runner.os }}-
+            lemo-segments-${{ inputs.request_id }}-${{ runner.os }}-
 
       - name: Render recoverable one-minute MP4 segments
         env:
-          DURATION: \${{ inputs.duration }}
-          RESOLUTION: \${{ inputs.resolution }}
+          DURATION: ${{ inputs.duration }}
+          RESOLUTION: ${{ inputs.resolution }}
         run: |
           set -euo pipefail
           TOTAL=$((DURATION * 60))
@@ -134,7 +134,7 @@ jobs:
           python scripts/audio_pipeline.py \
             --project project.json \
             --out output/audio.wav \
-            --duration "$(( \${{ inputs.duration }} * 60 ))" \
+            --duration "$(( ${{ inputs.duration }} * 60 ))" \
             --work output/audio_work
 
       - name: Mux MP4 with audio and subtitle track
@@ -146,13 +146,13 @@ jobs:
               -map 0:v:0 -map 1:a:0 -map 2:s:0 \
               -c:v copy -c:a aac -b:a 160k -c:s mov_text \
               -metadata:s:s:0 language=bur -movflags +faststart \
-              "output/GI-KO-KO-\${{ inputs.style }}-\${{ inputs.duration }}min-\${{ inputs.resolution }}-\${{ inputs.request_id }}.mp4"
+              "output/GI-KO-KO-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}-${{ inputs.request_id }}.mp4"
           else
             ffmpeg -y -hide_banner -loglevel error \
               -i output/video_silent.mp4 -i output/audio.wav \
               -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 160k \
               -movflags +faststart \
-              "output/GI-KO-KO-\${{ inputs.style }}-\${{ inputs.duration }}min-\${{ inputs.resolution }}-\${{ inputs.request_id }}.mp4"
+              "output/GI-KO-KO-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}-${{ inputs.request_id }}.mp4"
           fi
           test -s output/GI-KO-KO-*.mp4
           ffprobe -v error -show_entries format=duration,size \
@@ -161,7 +161,7 @@ jobs:
       - name: Upload final MP4 and subtitle files
         uses: actions/upload-artifact@v4
         with:
-          name: GI-KO-KO-\${{ inputs.style }}-\${{ inputs.duration }}min-\${{ inputs.resolution }}-\${{ inputs.request_id }}
+          name: GI-KO-KO-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}-${{ inputs.request_id }}
           path: |
             output/GI-KO-KO-*.mp4
             output/audio.srt
