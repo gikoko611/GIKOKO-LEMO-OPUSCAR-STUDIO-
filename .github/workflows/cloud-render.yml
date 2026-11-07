@@ -93,7 +93,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: output/segments
-          key: lemo-segments-${{ inputs.request_id }}-${{ runner.os }}
+          key: lemo-segments-${{ inputs.request_id }}-${{ runner.os }}-${{ github.run_attempt }}
           restore-keys: |
             lemo-segments-${{ inputs.request_id }}-
 
