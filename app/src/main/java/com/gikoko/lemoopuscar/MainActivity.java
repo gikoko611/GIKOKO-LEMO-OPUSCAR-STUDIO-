@@ -397,7 +397,51 @@ public class MainActivity extends Activity {
         new Thread(()->{try{downloadArtifact(id);}catch(Exception e){setStatus("Download error: "+e.getMessage());}finally{setBusy(false);}}).start();
     }
 
+
+    private void downloadReleaseMp4(long runId)throws Exception{
+        ApiResponse release=api("GET",API+"/releases/tags/render-"+runId,token,null);
+        if(release.code!=200)throw new Exception("Direct MP4 release not found (HTTP "+release.code+").");
+        JSONArray assets=new JSONObject(release.body).optJSONArray("assets");
+        if(assets==null)throw new Exception("Release has no downloadable assets.");
+        JSONObject mp4=null;
+        for(int i=0;i<assets.length();i++){
+            JSONObject asset=assets.getJSONObject(i);
+            if(asset.optString("name","").toLowerCase().endsWith(".mp4")){mp4=asset;break;}
+        }
+        if(mp4==null)throw new Exception("MP4 release asset not found.");
+        long assetId=mp4.getLong("id");
+        HttpURLConnection apiConn=(HttpURLConnection)new URL(API+"/releases/assets/"+assetId).openConnection();
+        apiConn.setRequestMethod("GET");
+        apiConn.setConnectTimeout(30000);apiConn.setReadTimeout(40000);apiConn.setInstanceFollowRedirects(false);
+        apiConn.setRequestProperty("Accept","application/octet-stream");
+        apiConn.setRequestProperty("Authorization","Bearer "+token);
+        apiConn.setRequestProperty("X-GitHub-Api-Version","2022-11-28");
+        int code=apiConn.getResponseCode();
+        String location=apiConn.getHeaderField("Location");
+        apiConn.disconnect();
+        if((code!=302&&code!=301)||location==null)throw new Exception("MP4 direct link request failed (HTTP "+code+").");
+        HttpURLConnection fileConn=(HttpURLConnection)new URL(location).openConnection();
+        fileConn.setConnectTimeout(30000);fileConn.setReadTimeout(0);fileConn.setInstanceFollowRedirects(true);
+        File downloads=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        if(!downloads.exists()&&!downloads.mkdirs())throw new Exception("Could not create Downloads folder.");
+        String name=new File(mp4.optString("name","GIKOKO-RENDER-"+runId+".mp4")).getName();
+        File target=new File(downloads,name);
+        setStatus("Downloading MP4 directly…");
+        try(InputStream in=new BufferedInputStream(fileConn.getInputStream());FileOutputStream out=new FileOutputStream(target)){
+            byte[] buf=new byte[64*1024];int n;long total=0;
+            while((n=in.read(buf))!=-1){out.write(buf,0,n);total+=n;if(total%(5*1024*1024)<buf.length)setStatus("Downloading MP4… "+(total/(1024*1024))+" MB");}
+        }finally{fileConn.disconnect();}
+        if(!target.exists()||target.length()==0)throw new Exception("Direct MP4 download returned an empty file.");
+        setStatus("SUCCESS — MP4 downloaded directly to Downloads.\\n"+target.getAbsolutePath());
+    }
+
     private void downloadArtifact(long runId)throws Exception{
+        try{
+            downloadReleaseMp4(runId);
+            return;
+        }catch(Exception releaseError){
+            setStatus("Direct MP4 link unavailable; using ZIP artifact fallback…");
+        }
         ApiResponse ar=api("GET",API+"/actions/runs/"+runId+"/artifacts?per_page=30",token,null);
         if(ar.code!=200)throw new Exception("Artifact list failed (HTTP "+ar.code+"): "+ar.body);
         JSONArray artifacts=new JSONObject(ar.body).optJSONArray("artifacts");
