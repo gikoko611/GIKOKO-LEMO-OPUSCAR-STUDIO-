@@ -53,8 +53,19 @@ jobs:
             --project "$RUNNER_TEMP/sample-project.json" \
             --duration 3 --offset 0 --resolution 480p \
             --out "$RUNNER_TEMP/gikoko-render-smoke.mp4"
+          python scripts/audio_pipeline.py \
+            --project "$RUNNER_TEMP/sample-project.json" \
+            --out "$RUNNER_TEMP/gikoko-audio-smoke.wav" \
+            --duration 3 --work "$RUNNER_TEMP/gikoko-audio-work"
+          ffmpeg -y -hide_banner -loglevel error \
+            -i "$RUNNER_TEMP/gikoko-render-smoke.mp4" \
+            -i "$RUNNER_TEMP/gikoko-audio-smoke.wav" \
+            -i "$RUNNER_TEMP/gikoko-audio-smoke.srt" \
+            -map 0:v:0 -map 1:a:0 -map 2:s:0 \
+            -c:v copy -c:a aac -c:s mov_text \
+            "$RUNNER_TEMP/gikoko-full-pipeline-smoke.mp4"
           ffprobe -v error -show_entries format=duration \
-            -of default=noprint_wrappers=1 "$RUNNER_TEMP/gikoko-render-smoke.mp4"
+            -of default=noprint_wrappers=1 "$RUNNER_TEMP/gikoko-full-pipeline-smoke.mp4"
       - name: Install Gradle 8.9
         run: |
           curl -L --fail --retry 3 https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip"
