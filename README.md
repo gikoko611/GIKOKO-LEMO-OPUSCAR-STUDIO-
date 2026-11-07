@@ -8,7 +8,7 @@
 - Write a film prompt and title.
 - Edit a character bible, scene outline and bilingual dialogue.
 - Save the project locally on the phone.
-- Select Cartoon 2D, Cartoon 3D or Cinematic; 1, 5, 10 or 30 minutes; 480p or 720p.
+- Select Hybrid, Cartoon 2D, Cartoon 3D or Cinematic; 1, 5, 10 or 30 minutes; 480p or 720p.
 - Start cloud rendering, check workflow step progress, retry failed jobs and download the MP4 from inside the APK.
 - GitHub Fine-grained token is encrypted with Android Keystore AES-GCM. It is not embedded in the APK.
 
@@ -16,8 +16,9 @@
 - OpenAI-compatible AI Story Assistant: configure Base URL, model and API key in the APK.
 - AI drafts title, character bible, scenes and English/Myanmar dialogue as JSON.
 - Edit all fields manually and save locally.
-- The renderer uses the scene list to calculate scene timing and displays scene titles/dialogue on the timeline.
-- Character silhouette remains consistent across scenes. The current renderer is procedural motion graphics, not an AI image/video generator.
+- The self-contained FFmpeg/Python renderer generates MP4 segments directly from the saved project; it does not depend on a third-party renderer repository.
+- Scene titles, character bible, recurring character animation, bilingual dialogue overlays and a full-film progress timeline are rendered into the video.
+- AI-generated story data drives the scene timeline. Visual output is procedural motion graphics, not photorealistic AI-generated footage or text-to-video output.
 
 ### 3. Audio & Subtitle Engine
 - English voice: Edge TTS en-US-GuyNeural.
@@ -28,9 +29,8 @@
 - Edge TTS requires network access and may be rate-limited; it is not an offline voice engine.
 
 ### 4. Cloud Render Queue
-- GitHub Actions cloud render.
-- One-minute MP4 segments, two renderer workers, three retries per segment.
-- Segment cache keyed by request ID and workflow attempt.
+- GitHub Actions cloud render using the repository's own FFmpeg/Python renderer.
+- One-minute MP4 segments, up to three retries per segment, and request-ID cache restoration.
 - APK can retry failed jobs and poll GitHub Actions step progress.
 - MP4 and SRT artifact export; artifact retention is 7 days.
 
@@ -57,3 +57,15 @@ Open GitHub Actions → Build G.I KO KO Studio APK → Run workflow. Download ar
 - GitHub Actions has account usage and runner time limits. A 30-minute film at 24 FPS is 43,200 frames; 30-minute 720p output is not guaranteed to complete within free usage.
 - Start with a 1-minute 480p render and confirm the end-to-end flow before longer projects.
 - See docs/PROJECT_FORMAT.md for the JSON schema and pipeline behavior.
+
+
+## End-to-end render pipeline
+1. In the APK, configure a supported text AI provider and tap **AI STORY ASSIST**. The prompt includes the selected duration and style so long-form projects request more scenes/dialogue.
+2. Review the generated title, character bible, scenes and bilingual dialogue. Save the project.
+3. Select **Hybrid**, **Bilingual voice-over**, **30 minutes**, and the required resolution, then tap **START RENDER**.
+4. The APK dispatches `.github/workflows/cloud-render.yml`. GitHub Actions renders recoverable one-minute segments using `scripts/render_video.py`, then joins them with FFmpeg.
+5. `scripts/audio_pipeline.py` creates English/Myanmar Edge TTS, generated background audio, sound accents and Myanmar SRT subtitles. FFmpeg muxes audio/subtitles into the final MP4.
+6. The APK polls the run, downloads the artifact ZIP and extracts the MP4 into the phone's Downloads folder.
+
+## Renderer scope
+The new engine is self-contained and code-driven. It creates animated mascot motion graphics, backgrounds, titles, scene cards, dialogue overlays, audio and subtitles. It is **not** a diffusion model or a generative text-to-video engine; AI providers write the story, while FFmpeg/Python produce the visuals. Image/video provider fields in Provider Control Center remain configuration slots and do not yet invoke external image/video generation APIs.
