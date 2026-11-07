@@ -85,6 +85,7 @@ public class MainActivity extends Activity {
         aiModelInput=edit("gpt-4o-mini","Model ID",false);root.addView(aiModelInput);
         aiKeyInput=edit("","AI API Key (optional; encrypted on device)",true);root.addView(aiKeyInput);
         Button saveAi=button("SAVE AI PROVIDER");root.addView(saveAi);saveAi.setOnClickListener(v->saveAiProvider());
+        Button providers=button("🌐 ALL PROVIDER CONFIGURATION");root.addView(providers);providers.setOnClickListener(v->new ProviderManager(this).open());
         Button assist=button("✨ AI STORY ASSIST");root.addView(assist);assist.setOnClickListener(v->assistStory());
 
         root.addView(label("STORY & TIMELINE ENGINE",18));
@@ -160,31 +161,27 @@ public class MainActivity extends Activity {
         }catch(Exception ignored){}
     }
     private void assistStory(){
-        if(busy)return;String prompt=promptInput.getText().toString().trim();if(prompt.isEmpty()){setStatus("Enter a film idea first.");return;}
-        String key=null;try{String enc=prefs().getString("ai_key_enc",null);if(enc!=null)key=decrypt(enc);}catch(Exception ignored){}
-        if(key==null||key.isEmpty()){offlineStoryAssist(prompt);return;}
-        final String apiKey=key,base=prefs().getString("ai_base","https://api.openai.com/v1"),model=prefs().getString("ai_model","gpt-4o-mini");
-        setBusy(true);setStatus("AI assistant is drafting the story, scenes and bilingual dialogue…");
-        new Thread(()->{
-            try{
-                JSONObject body=new JSONObject();body.put("model",model);body.put("temperature",0.7);
-                JSONArray msgs=new JSONArray();JSONObject sys=new JSONObject();sys.put("role","system");sys.put("content","You are a professional animation screenwriter. Return ONLY valid JSON with keys title, character_bible, scenes (array of 4-8 concise scene descriptions), dialogue (array of objects with english and myanmar). Preserve a single consistent character design. Keep dialogue concise and suitable for a short animated film.");
-                JSONObject usr=new JSONObject();usr.put("role","user");usr.put("content","Create a storyboard for this idea. Keep it visually renderable as a simple 2D/3D/cinematic motion-graphics sequence. Idea: "+prompt);
-                msgs.put(sys);msgs.put(usr);body.put("messages",msgs);
-                ApiResponse response=api("POST",base.replaceAll("/+$","")+"/chat/completions",apiKey,body.toString());
-                if(response.code<200||response.code>=300)throw new Exception("AI provider HTTP "+response.code+": "+response.body.substring(0,Math.min(500,response.body.length())));
-                JSONObject root=new JSONObject(response.body);String content=root.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content").trim();
-                content=content.replaceAll("^\\x60{3}json\\s*","").replaceAll("\\x60{3}\\s*$","");
-                JSONObject story=new JSONObject(content);
-                main.post(()->{
-                    titleInput.setText(story.optString("title","Untitled Story"));characterInput.setText(story.optString("character_bible",""));
-                    JSONArray sc=story.optJSONArray("scenes");StringBuilder sb=new StringBuilder();if(sc!=null)for(int i=0;i<sc.length();i++)sb.append(sc.optString(i)).append("\n");sceneInput.setText(sb.toString());
-                    JSONArray ds=story.optJSONArray("dialogue");StringBuilder db=new StringBuilder();if(ds!=null)for(int i=0;i<ds.length();i++){JSONObject d=ds.optJSONObject(i);db.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(db.toString());
-                    setStatus("AI story draft ready. Review and edit every scene before rendering.");
-                });
-            }catch(Exception e){setStatus("AI assist error: "+e.getMessage());}
-            finally{setBusy(false);}
-        }).start();
+        if(busy)return;
+        String prompt=promptInput.getText().toString().trim();
+        if(prompt.isEmpty()){setStatus("Enter a film idea first.");return;}
+        setBusy(true);setStatus("AI Director: trying configured providers with automatic fallback…");
+        new ProviderManager(this).generateStory(prompt,(story,err,provider)->{
+            if(err!=null){
+                setBusy(false);
+                setStatus("AI provider chain failed: "+err+" — using offline outline helper.");
+                offlineStoryAssist(prompt);
+                return;
+            }
+            titleInput.setText(story.optString("title","Untitled Story"));
+            characterInput.setText(story.optString("character_bible",""));
+            JSONArray sc=story.optJSONArray("scenes");StringBuilder sb=new StringBuilder();
+            if(sc!=null)for(int i=0;i<sc.length();i++)sb.append(sc.optString(i)).append("\n");
+            sceneInput.setText(sb.toString());
+            JSONArray ds=story.optJSONArray("dialogue");StringBuilder db=new StringBuilder();
+            if(ds!=null)for(int i=0;i<ds.length();i++){JSONObject d=ds.optJSONObject(i);db.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}
+            dialogueInput.setText(db.toString());
+            setBusy(false);setStatus("AI story draft ready via "+provider+". Review and edit before rendering.");
+        });
     }
     private void offlineStoryAssist(String prompt){
         String[] ideas=prompt.split("[.!?。！？]+");StringBuilder scenes=new StringBuilder();int count=0;
