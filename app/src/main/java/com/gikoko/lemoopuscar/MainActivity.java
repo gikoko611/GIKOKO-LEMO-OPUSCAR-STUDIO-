@@ -143,7 +143,7 @@ public class MainActivity extends Activity {
         setBusy(true);setStatus("Validating token with GitHub…");
         new Thread(()->{
             try{
-                ApiResponse r=api("GET","https://api.github.com/user",candidate,null);
+                ApiResponse r=api("GET",API+"/actions/workflows/"+WORKFLOW,candidate,null);
                 if(r.code!=200)throw new Exception("GitHub token validation failed (HTTP "+r.code+"). Check token and repository permissions.");
                 String encrypted=encrypt(candidate);prefs().edit().putString(TOKEN_KEY,encrypted).apply();token=candidate;
                 main.post(()->{tokenInput.setText("");saveButton.setText("UPDATE TOKEN");setStatus("Token validated and encrypted in Android Keystore.");});
