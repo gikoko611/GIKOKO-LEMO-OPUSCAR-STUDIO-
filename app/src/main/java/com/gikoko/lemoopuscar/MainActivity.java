@@ -432,7 +432,7 @@ public class MainActivity extends Activity {
             while((n=in.read(buf))!=-1){out.write(buf,0,n);total+=n;if(total%(5*1024*1024)<buf.length)setStatus("Downloading MP4… "+(total/(1024*1024))+" MB");}
         }finally{fileConn.disconnect();}
         if(!target.exists()||target.length()==0)throw new Exception("Direct MP4 download returned an empty file.");
-        setStatus("SUCCESS — MP4 downloaded directly to Downloads.\\n"+target.getAbsolutePath());
+        setStatus("SUCCESS — MP4 downloaded directly to Downloads.\n"+target.getAbsolutePath());
     }
 
     private void downloadArtifact(long runId)throws Exception{
