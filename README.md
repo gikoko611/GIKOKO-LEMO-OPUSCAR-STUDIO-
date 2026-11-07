@@ -47,13 +47,13 @@
 - Configure an HTTPS OpenAI-compatible Base URL.
 - Enter the model ID and API key.
 - Tap SAVE AI PROVIDER; the API key is encrypted with Android Keystore.
-- Tap AI STORY ASSIST to draft scenes and dialogue. Without an AI key, the app offers a basic offline scene-outline helper instead.
+- Tap AI STORY ASSIST to draft scenes, bilingual dialogue and the animation scene-plan code. Without an AI key, the app offers a basic offline scene-outline helper instead.
 
 ## Build APK
 Open GitHub Actions → Build G.I KO KO Studio APK → Run workflow. Download artifact GIKOKO-LEMO-OPUSCAR-STUDIO-APK and install app-debug.apk on Android 10 / ARMv7.
 
 ## Important limitations
-- The renderer is code-driven and procedural; the AI assistant writes story data but does not yet generate new character images or cinematic footage.
+- The renderer is code-driven and procedural; the AI assistant now writes a constrained JavaScript scene plan, but does not generate new character images or photorealistic cinematic footage.
 - Edge TTS is online and can be unavailable or rate-limited.
 - GitHub Actions has account usage and runner time limits. A 30-minute film at 24 FPS is 43,200 frames; 30-minute 720p output is not guaranteed to complete within free usage.
 - Start with a 1-minute 480p render and confirm the end-to-end flow before longer projects.
@@ -62,11 +62,11 @@ Open GitHub Actions → Build G.I KO KO Studio APK → Run workflow. Download ar
 
 ## End-to-end render pipeline
 1. In the APK, configure a supported text AI provider and tap **AI STORY ASSIST**. The prompt includes the selected duration and style so long-form projects request more scenes/dialogue.
-2. Review the generated title, character bible, scenes and bilingual dialogue. Save the project.
+2. Review the generated title, character bible, scenes, bilingual dialogue and AI animation scene plan. Save the project.
 3. Select **Hybrid**, **Bilingual voice-over**, **30 minutes**, and the required resolution, then tap **START RENDER**.
-4. The APK dispatches `.github/workflows/cloud-render.yml`. GitHub Actions renders recoverable one-minute segments using `scripts/render_video.py`, then joins them with FFmpeg.
+4. The APK dispatches `.github/workflows/cloud-render.yml`. GitHub Actions validates and executes `animation_code` through `scripts/animation_runtime.js`, then renders recoverable one-minute segments using `scripts/render_video.py` and joins them with FFmpeg.
 5. `scripts/audio_pipeline.py` creates English/Myanmar Edge TTS, generated background audio, sound accents and Myanmar SRT subtitles. FFmpeg muxes audio/subtitles into the final MP4.
 6. The APK polls the run, downloads the artifact ZIP and extracts the MP4 into the phone's Downloads folder.
 
 ## Renderer scope
-The new engine is self-contained and code-driven. It creates animated mascot motion graphics, backgrounds, titles, scene cards, dialogue overlays, audio and subtitles. It is **not** a diffusion model or a generative text-to-video engine; AI providers write the story, while FFmpeg/Python produce the visuals. Image/video provider fields in Provider Control Center remain configuration slots and do not yet invoke external image/video generation APIs.
+The new engine is self-contained and code-driven. It creates animated mascot motion graphics, backgrounds, titles, scene cards, dialogue overlays, audio and subtitles. It is **not** a diffusion model or a photorealistic generative text-to-video engine; AI providers write the story and constrained scene-plan code, while FFmpeg/Python produce the visuals. Image/video provider fields in Provider Control Center remain configuration slots and do not yet invoke external image/video generation APIs.
