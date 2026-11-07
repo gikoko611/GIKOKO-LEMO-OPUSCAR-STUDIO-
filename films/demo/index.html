@@ -1,45 +1,83 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>G.I KO KO — Cloud Render Demo</title>
-  <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #080b12; }
-    body { display: grid; place-items: center; font-family: Arial, Helvetica, sans-serif; color: #f7e7b0; }
-    .stage {
-      position: relative; width: 100%; height: 100%;
-      display: grid; place-items: center; text-align: center;
-      background:
-        radial-gradient(ellipse at 50% 45%, rgba(184,132,42,.22), transparent 48%),
-        linear-gradient(135deg, #080b12 0%, #142019 52%, #080b12 100%);
-    }
-    .frame { padding: 5vw; transform: translateY(24px); opacity: 0; }
-    .mark { color: #e8bd58; font-size: clamp(42px, 10vw, 112px); font-weight: 900; letter-spacing: .12em; text-shadow: 0 0 28px rgba(232,189,88,.28); }
-    .rule { width: 34%; height: 3px; margin: 24px auto; background: linear-gradient(90deg, transparent, #e8bd58, transparent); }
-    .sub { color: #f7e7b0; font-size: clamp(16px, 3vw, 30px); letter-spacing: .22em; }
-    .credit { margin-top: 28px; color: #b7c4b4; font-size: clamp(12px, 1.8vw, 18px); letter-spacing: .18em; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>G.I KO KO Professional Film</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070a10}
+canvas{display:block;width:100%;height:100%}
+</style>
 </head>
 <body>
-  <main class="stage">
-    <section class="frame" id="frame">
-      <div class="mark">G.I KO KO</div>
-      <div class="rule"></div>
-      <div class="sub">CLOUD RENDER STUDIO</div>
-      <div class="credit">POWERED BY I KO KO</div>
-    </section>
-  </main>
-  <script>
-    window.DUR = 10;
-    window.READY = true;
-    window.render = function (t) {
-      const p = Math.max(0, Math.min(1, t / 2));
-      const frame = document.getElementById("frame");
-      frame.style.opacity = String(p);
-      frame.style.transform = "translateY(" + (24 * (1 - p)) + "px) scale(" + (0.96 + 0.04 * p) + ")";
-    };
-  </script>
+<canvas id="film"></canvas>
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const duration = Math.max(60, Number(params.get("duration")) || 60);
+  const style = params.get("style") || "cartoon2d";
+  const canvas = document.getElementById("film");
+  const ctx = canvas.getContext("2d");
+  const W = 1920, H = 1080;
+  canvas.width = W; canvas.height = H;
+  window.DUR = duration;
+  const gold = "#e9c46a", cream = "#fff0c2";
+  const seed = 611;
+  const stars = Array.from({length:150}, (_,i) => ({
+    x: ((i*7919+seed*17)%10000)/10000*W,
+    y: ((i*3571+seed*31)%10000)/10000*H,
+    r: .7+((i*13)%22)/10,
+    p: (i%17)/17
+  }));
+  function rounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+  function render(t) {
+    const phase = (t % 20) / 20;
+    const intro = Math.min(1,t/3);
+    const cinematic = style === "cinematic";
+    const cartoon = style.startsWith("cartoon");
+    const bg = ctx.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0, cinematic ? "#101827" : "#142b2a");
+    bg.addColorStop(.55, cinematic ? "#263348" : "#31564b");
+    bg.addColorStop(1, "#080b12");
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    if(cinematic){
+      const glow=ctx.createRadialGradient(W*.5,H*.48,10,W*.5,H*.48,700);
+      glow.addColorStop(0,"rgba(233,196,106,.25)");glow.addColorStop(1,"rgba(233,196,106,0)");
+      ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+      ctx.fillStyle="rgba(0,0,0,.3)";ctx.fillRect(0,0,W,130);ctx.fillRect(0,H-130,W,130);
+    } else {
+      ctx.fillStyle="rgba(247,220,150,.12)";
+      ctx.beginPath();ctx.arc(W*.78,H*.25,180+Math.sin(t)*8,0,Math.PI*2);ctx.fill();
+    }
+    stars.forEach(s=>{
+      const a=.25+.65*(.5+.5*Math.sin(t*1.4+s.p*8));
+      ctx.globalAlpha=a;ctx.fillStyle=gold;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+    });ctx.globalAlpha=1;
+    const drift=Math.sin(t*.65)*24;
+    if(cartoon){
+      // Stylised story-stage silhouettes; a production-ready storyboard can replace these layers.
+      rounded(210,760+drift*.2,1500,190,38,"rgba(4,12,13,.48)");
+      ctx.fillStyle=style==="cartoon3d"?"#d7a84f":"#e7bd6b";
+      ctx.beginPath();ctx.ellipse(W/2,700+drift,155,190,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#203c38";ctx.beginPath();ctx.arc(W/2-55,665+drift,17,0,Math.PI*2);ctx.arc(W/2+55,665+drift,17,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="#203c38";ctx.lineWidth=12;ctx.beginPath();ctx.arc(W/2,715+drift,55,.15,Math.PI-.15);ctx.stroke();
+    }
+    ctx.textAlign="center";
+    ctx.globalAlpha=intro;
+    ctx.fillStyle=gold;ctx.font="900 112px Arial";ctx.fillText("G.I KO KO",W/2,cinematic?430:350);
+    ctx.fillStyle=cream;ctx.font="600 42px Arial";
+    const label=style==="cinematic"?"CINEMATIC FILM":style==="cartoon3d"?"3D CARTOON STORY":"2D CARTOON STORY";
+    ctx.fillText(label,W/2,cinematic?520:435);
+    ctx.fillStyle="rgba(255,240,194,.8)";ctx.font="28px Arial";
+    ctx.fillText("POWERED BY I KO KO",W/2,cinematic?610:510);
+    ctx.globalAlpha=1;
+    const barW=520;rounded((W-barW)/2,H-170,barW,5,3,"rgba(255,255,255,.2)");
+    rounded((W-barW)/2,H-170,barW*phase,5,3,gold);
+  }
+  window.render=render;
+  window.READY=true;
+  render(0);
+})();
+</script>
 </body>
 </html>
