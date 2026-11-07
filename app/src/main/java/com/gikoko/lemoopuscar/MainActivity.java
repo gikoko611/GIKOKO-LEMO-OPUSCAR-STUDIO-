@@ -310,7 +310,7 @@ public class MainActivity extends Activity {
                     latest=new JSONObject(sr.body);
                     String state=latest.optString("status","unknown");
                     String conclusion=latest.optString("conclusion","");
-                    setStatus("Render "+state+" — "+style+" / "+duration+" min / "+resolution+"\nRun ID: "+runId);
+                    setStatus("Render "+state+" — "+style+" / "+duration+" min / "+resolution+"\nRun ID: "+runId+(i%3==0?"\n"+getRunProgress(runId):""));
                     if("completed".equals(state)){
                         if(!"success".equals(conclusion))throw new Exception("Render finished with result: "+conclusion+". Open the run logs to inspect the failure.");
                         setStatus("Render complete. Downloading MP4 artifact…");
@@ -339,7 +339,7 @@ public class MainActivity extends Activity {
                     ApiResponse sr=api("GET",API+"/actions/runs/"+id,token,null);
                     if(sr.code!=200)throw new Exception("Retry status failed (HTTP "+sr.code+"): "+sr.body);
                     JSONObject run=new JSONObject(sr.body);String state=run.optString("status","unknown"),result=run.optString("conclusion","");
-                    setStatus("Retry render "+state+" / "+result+"\nRun ID: "+id);
+                    setStatus("Retry render "+state+" / "+result+"\nRun ID: "+id+(i%3==0?"\n"+getRunProgress(id):""));
                     if("completed".equals(state)){
                         if(!"success".equals(result))throw new Exception("Retry finished with result: "+result);
                         setStatus("Retry complete. Downloading MP4…");downloadArtifact(id);return;
