@@ -9,7 +9,7 @@ on:
         required: true
         type: choice
         default: cartoon2d
-        options: [cartoon2d, cartoon3d, cinematic]
+        options: [hybrid, cartoon2d, cartoon3d, cinematic]
       duration:
         description: "Video duration (minutes)"
         required: true
