@@ -61,7 +61,15 @@ def main():
         w=Path(td); mascot=w/"mascot.png"; make_mascot(mascot)
         regular=font_path("Noto Sans","/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
         myanmar=font_path("Noto Sans Myanmar",regular)
-        filters=["[0:v][1:v]overlay=x='(W-w)/2+55*sin(2*PI*t/5)':y='H*0.38-h/2+10*sin(2*PI*t/2.5)':shortest=1[base]"]
+        scene_index=min(len(plan)-1,int((offset/max(1,total))*len(plan))) if plan else 0
+        motion=str(plan[scene_index].get("motion","float")) if plan else "float"
+        if motion=="bounce": mascot_y="H*0.38-h/2+22*abs(sin(2*PI*t/1.4))"
+        elif motion=="slide": mascot_y="H*0.38-h/2";
+        elif motion=="pulse": mascot_y="H*0.38-h/2+8*sin(2*PI*t/1.0)"
+        elif motion=="still": mascot_y="H*0.38-h/2"
+        else: mascot_y="H*0.38-h/2+10*sin(2*PI*t/2.5)"
+        mascot_x="(W-w)/2+55*sin(2*PI*t/5)" if motion!="slide" else "(W-w)/2-70+140*min(1,t/4)"
+        filters=[f"[0:v][1:v]overlay=x='{mascot_x}':y='{mascot_y}':shortest=1[base]"]
         chain="base"
         def draw(name,value,y,size,font=regular,color="0xfff0c2",box="0x000000@0.42",enable=None):
             nonlocal chain
@@ -75,9 +83,13 @@ def main():
         draw("credit","POWERED BY I KO KO","h*0.20",int(height*.027),color="0xffe8b0",box="0x000000@0.22")
         draw("character",textwrap.fill(str(p.get("character_bible") or "A consistent royal hero."),58)[:650],
              "h*0.77",int(height*.026),font=myanmar,enable="between(t,0,8)",box="0x000000@0.55")
-        span=total/max(1,len(scenes))
+        raw_durations=[max(1.0,float(x.get("duration",10))) for x in plan] if plan else [1.0]*len(scenes)
+        duration_sum=sum(raw_durations) or 1.0
+        cursor=0.0
         for i,scene in enumerate(scenes):
-            start=i*span-offset; end=(i+1)*span-offset
+            span_i=total*raw_durations[i]/duration_sum
+            start=cursor-offset; end=cursor+span_i-offset
+            cursor+=span_i
             if end<0 or start>duration: continue
             en=f"between(t,{max(0,start):.3f},{min(duration,end):.3f})"
             draw(f"scene_{i}",f"SCENE {i+1} / {len(scenes)}","h*0.30",int(height*.043),color="0xffd780",enable=en,box="0x000000@0.32")
