@@ -8,7 +8,7 @@ on:
         description: "Film style"
         required: true
         type: choice
-        default: cartoon2d
+        default: hybrid
         options: [hybrid, cartoon2d, cartoon3d, cinematic]
       duration:
         description: "Video duration (minutes)"
