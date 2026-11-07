@@ -1,45 +1,59 @@
 # G.I KO KO LEMO OPUSCAR PROFESSIONAL STUDIO
 
-**Powered By I KO KO** — Android controller for Cartoon and Cinematic cloud rendering.
+**Powered By I KO KO** — Android-first cartoon and cinematic story production studio.
 
-## APK features
-- Cartoon 2D, Cartoon 3D, and Cinematic presets.
-- 1, 5, 10, and 30-minute duration presets.
-- 480p and 720p, 24 FPS MP4 render configuration.
-- Start GitHub Actions directly from the APK using the GitHub REST API.
-- Poll the exact render request using a unique request ID.
-- Download the workflow artifact ZIP and extract the MP4 into the phone's Download folder.
-- Fine-grained token encrypted using Android Keystore AES-GCM; the token is not hard-coded in the APK.
-- Android minSdk 23; GitHub Actions builds the APK (no local Android Studio/JDK required).
+## Studio modules
 
-## One-time GitHub token setup
-1. Open GitHub in a browser and go to Settings → Developer settings → Personal access tokens → Fine-grained tokens.
-2. Select Generate new token.
-3. Set Resource owner to the account that owns this repository.
-4. Under Repository access choose Only select repositories and select GIKOKO-LEMO-OPUSCAR-STUDIO-.
-5. Under Repository permissions set Actions: Read and write. No Contents write permission is required by the APK render controller.
-6. Choose an expiry date, generate the token, and copy it. Do not share it in chats or commit it to this repository.
-7. Open the APK, paste the token into the token field, and tap SAVE TOKEN. The app validates the workflow permission and encrypts the token with Android Keystore. The input field is cleared after saving.
+### 1. Android APK
+- Write a film prompt and title.
+- Edit a character bible, scene outline and bilingual dialogue.
+- Save the project locally on the phone.
+- Select Cartoon 2D, Cartoon 3D or Cinematic; 1, 5, 10 or 30 minutes; 480p or 720p.
+- Start cloud rendering, check workflow step progress, retry failed jobs and download the MP4 from inside the APK.
+- GitHub Fine-grained token is encrypted with Android Keystore AES-GCM. It is not embedded in the APK.
 
-GitHub documents that workflow dispatch requires Actions write permission, while run/artifact listing and artifact download require Actions read permission:
-- https://docs.github.com/en/rest/actions/workflows
-- https://docs.github.com/en/rest/actions/artifacts
-- https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens
+### 2. Story & Timeline Engine
+- OpenAI-compatible AI Story Assistant: configure Base URL, model and API key in the APK.
+- AI drafts title, character bible, scenes and English/Myanmar dialogue as JSON.
+- Edit all fields manually and save locally.
+- The renderer uses the scene list to calculate scene timing and displays scene titles/dialogue on the timeline.
+- Character silhouette remains consistent across scenes. The current renderer is procedural motion graphics, not an AI image/video generator.
 
-## Render from inside the APK
-1. Save the token once.
-2. Choose Cartoon 2D, Cartoon 3D, or Cinematic.
-3. Choose 1, 5, 10, or 30 minutes and 480p or 720p.
-4. Tap START RENDER. The app sends the workflow dispatch request directly; no workflow page is required.
-5. Keep the phone online. The app checks the run and downloads the MP4 automatically after success.
-6. Find the video in the phone's Download folder. You can also use CHECK RENDER STATUS and DOWNLOAD LATEST MP4 later.
+### 3. Audio & Subtitle Engine
+- English voice: Edge TTS en-US-GuyNeural.
+- Myanmar voice: Edge TTS my-MM-ThihaNeural.
+- Bilingual voice option.
+- Procedurally synthesized background music and scene accents.
+- Myanmar SRT subtitles embedded as an MP4 soft-subtitle track and included as a separate artifact.
+- Edge TTS requires network access and may be rate-limited; it is not an offline voice engine.
 
-If the app is closed while rendering, GitHub Actions continues in the cloud. Reopen the app and use CHECK RENDER STATUS, then DOWNLOAD LATEST MP4.
+### 4. Cloud Render Queue
+- GitHub Actions cloud render.
+- One-minute MP4 segments, two renderer workers, three retries per segment.
+- Segment cache keyed by request ID and workflow attempt.
+- APK can retry failed jobs and poll GitHub Actions step progress.
+- MP4 and SRT artifact export; artifact retention is 7 days.
 
-## Cloud renderer and limitations
-The render workflow uses the upstream Lemo-Opuscar code renderer, Node, Chromium, and FFmpeg. The current demo scene is procedural motion graphics; it is a pipeline sample, not a complete storyboard editor or a prompt-driven generative AI video engine. Full production features such as multi-scene storyboards, character continuity, voice-over, subtitles, music/SFX mixing and a visual timeline remain planned development work.
+## Secure GitHub token setup
+1. Open https://github.com/settings/personal-access-tokens/new
+2. Select resource owner gikoko611.
+3. Select Only select repositories and choose GIKOKO-LEMO-OPUSCAR-STUDIO-.
+4. Grant Actions: Read and write for this repository.
+5. Generate the token, paste it in the APK and tap SAVE TOKEN. Never paste the token into chat or commit it.
+6. The app validates workflow access and stores the token encrypted on-device.
 
-A 30-minute video at 24 FPS contains 43,200 frames. Long renders must be benchmarked; GitHub runner time, account policies, queueing, and storage limits apply. Artifacts are retained for 7 days. Start with 1 minute at 480p to verify the end-to-end pipeline.
+## AI provider setup
+- Configure an HTTPS OpenAI-compatible Base URL.
+- Enter the model ID and API key.
+- Tap SAVE AI PROVIDER; the API key is encrypted with Android Keystore.
+- Tap AI STORY ASSIST to draft scenes and dialogue. Without an AI key, the app offers a basic offline scene-outline helper instead.
 
 ## Build APK
-Open the repository Actions tab → Build G.I KO KO Studio APK → Run workflow. Download the GIKOKO-LEMO-OPUSCAR-STUDIO-APK artifact and install app-debug.apk on Android 10 / ARMv7.
+Open GitHub Actions → Build G.I KO KO Studio APK → Run workflow. Download artifact GIKOKO-LEMO-OPUSCAR-STUDIO-APK and install app-debug.apk on Android 10 / ARMv7.
+
+## Important limitations
+- The renderer is code-driven and procedural; the AI assistant writes story data but does not yet generate new character images or cinematic footage.
+- Edge TTS is online and can be unavailable or rate-limited.
+- GitHub Actions has account usage and runner time limits. A 30-minute film at 24 FPS is 43,200 frames; 30-minute 720p output is not guaranteed to complete within free usage.
+- Start with a 1-minute 480p render and confirm the end-to-end flow before longer projects.
+- See docs/PROJECT_FORMAT.md for the JSON schema and pipeline behavior.
