@@ -83,7 +83,7 @@ def main():
         # Short original per-scene impact accents, generated from a low sine oscillator.
         sfx_path=work/"sfx.wav"
         period=max(3,duration/max(1,len(project.get("scenes") or [1])))
-        expr=f"0.025*sin(2*PI*82*t)*if(lt(mod(t\\\\,{period})\\\\,0.22)\\\\,exp(-mod(t\\\\,{period})*12)\\\\,0)"
+        expr=f"0.025*sin(2*PI*82*t)*if(lt(mod(t\,{period})\,0.22)\,exp(-mod(t\,{period})*12)\,0)"
         try:
             run(["ffmpeg","-y","-loglevel","error","-f","lavfi","-i",f"aevalsrc={expr}:s=48000:d={duration}","-c:a","pcm_s16le",str(sfx_path)])
             inputs += ["-i",str(sfx_path)]
