@@ -66,7 +66,7 @@ Open GitHub Actions → Build G.I KO KO Studio APK → Run workflow. Download ar
 3. Select **Hybrid**, **Bilingual voice-over**, **30 minutes**, and the required resolution, then tap **START RENDER**.
 4. The APK dispatches `.github/workflows/cloud-render.yml`. GitHub Actions validates and executes `animation_code` through `scripts/animation_runtime.js`, then renders recoverable one-minute segments using `scripts/render_video.py` and joins them with FFmpeg.
 5. `scripts/audio_pipeline.py` creates English/Myanmar Edge TTS, generated background audio, sound accents and Myanmar SRT subtitles. FFmpeg muxes audio/subtitles into the final MP4.
-6. The APK polls the run, downloads the artifact ZIP and extracts the MP4 into the phone's Downloads folder.
+6. GitHub Actions publishes the MP4 as a direct GitHub Release asset (tag `render-<run_id>`) and also keeps the ZIP artifact as backup. The APK downloads the MP4 asset directly into the phone's Downloads folder; if the Release asset is unavailable, it falls back to extracting the ZIP artifact.
 
 ## Renderer scope
 The new engine is self-contained and code-driven. It creates animated mascot motion graphics, backgrounds, titles, scene cards, dialogue overlays, audio and subtitles. It is **not** a diffusion model or a photorealistic generative text-to-video engine; AI providers write the story and constrained scene-plan code, while FFmpeg/Python produce the visuals. Image/video provider fields in Provider Control Center remain configuration slots and do not yet invoke external image/video generation APIs.
