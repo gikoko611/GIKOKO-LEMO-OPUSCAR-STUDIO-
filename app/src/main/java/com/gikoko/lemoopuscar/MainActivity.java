@@ -278,7 +278,8 @@ public class MainActivity extends Activity {
         JSONObject projectCheck=buildProject();
         if(projectJson.length()>45000){setStatus("Project is too large. Shorten the prompt/dialogue and try again.");return;}
         if(projectCheck.optJSONArray("scenes")==null||projectCheck.optJSONArray("scenes").length()==0){setStatus("Add at least one scene before rendering.");return;}
-        prefs().edit().putString("last_project",projectJson).apply();\n        setBusy(true);setStatus("Sending render request to GitHub Actions…");
+        prefs().edit().putString("last_project",projectJson).apply();
+        setBusy(true);setStatus("Sending render request to GitHub Actions…");
         new Thread(()->{
             try{
                 JSONObject inputs=new JSONObject();inputs.put("style",style);inputs.put("duration",duration);inputs.put("resolution",resolution);inputs.put("request_id",requestId);
