@@ -45,7 +45,7 @@ public class MainActivity extends Activity {
     private EditText tokenInput,aiBaseInput,aiModelInput,aiKeyInput,titleInput,promptInput,characterInput,sceneInput,dialogueInput;
     private Spinner styleSpinner,durationSpinner,resolutionSpinner;
     private TextView status;
-    private Button startButton,saveButton,checkButton,downloadButton;\n    private Spinner voiceSpinner;\n    private CheckBox musicCheck,sfxCheck,subtitleCheck;
+    private Button startButton,saveButton,checkButton,downloadButton,retryButton;\n    private Spinner voiceSpinner;\n    private CheckBox musicCheck,sfxCheck,subtitleCheck;
     private String token;
     private boolean busy=false,pendingStart=false;
 
@@ -108,6 +108,7 @@ public class MainActivity extends Activity {
             if(token==null){setStatus("Please save your Fine-grained GitHub token first.");return;}
             if(ensureStoragePermission()){startRender();}else{pendingStart=true;requestStoragePermission();}
         });
+        retryButton=button("RETRY FAILED RENDER");root.addView(retryButton);retryButton.setOnClickListener(v->retryFailedRender());
         checkButton=button("CHECK RENDER STATUS");root.addView(checkButton);checkButton.setOnClickListener(v->checkLastRun());
         downloadButton=button("DOWNLOAD LATEST MP4");root.addView(downloadButton);downloadButton.setOnClickListener(v->downloadLastRun());
         status=label(token==null?"Status: Add your GitHub token to begin.":"Status: Ready — token encrypted on this device.",14);root.addView(status);
@@ -187,7 +188,7 @@ public class MainActivity extends Activity {
 
     private void setStatus(String s){main.post(()->status.setText(s));}
     private void setBusy(boolean b){
-        busy=b;main.post(()->{startButton.setEnabled(!b);checkButton.setEnabled(!b);downloadButton.setEnabled(!b);saveButton.setEnabled(!b);});
+        busy=b;main.post(()->{startButton.setEnabled(!b);checkButton.setEnabled(!b);downloadButton.setEnabled(!b);saveButton.setEnabled(!b);if(retryButton!=null)retryButton.setEnabled(!b);});
     }
     private boolean ensureStoragePermission(){
         if(Build.VERSION.SDK_INT>=23 && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)!=PackageManager.PERMISSION_GRANTED)return false;
@@ -266,6 +267,7 @@ public class MainActivity extends Activity {
         final String duration=durationSpinner.getSelectedItem().toString();
         final String resolution=resolutionSpinner.getSelectedItem().toString();
         final String requestId=UUID.randomUUID().toString().replace("-","").substring(0,12);
+        prefs().edit().putString("last_request_id",requestId).apply();
         final String projectJson=buildProject().toString();
         JSONObject projectCheck=buildProject();
         if(projectJson.length()>45000){setStatus("Project is too large. Shorten the prompt/dialogue and try again.");return;}
@@ -314,6 +316,32 @@ public class MainActivity extends Activity {
                 }
                 throw new Exception("Render is still running. Use CHECK RENDER STATUS and DOWNLOAD LATEST MP4 later.");
             }catch(Exception e){setStatus("Render error: "+e.getMessage());}
+            finally{setBusy(false);}
+        }).start();
+    }
+
+    private void retryFailedRender(){
+        if(token==null){setStatus("Save your GitHub token first.");return;}
+        long id=lastRunId();if(id<=0){setStatus("No previous render run to retry.");return;}
+        if(busy)return;setBusy(true);setStatus("Requesting GitHub to retry failed render steps…");
+        new Thread(()->{
+            try{
+                ApiResponse rr=api("POST",API+"/actions/runs/"+id+"/rerun-failed-jobs",token,null);
+                if(rr.code!=201&&rr.code!=202)throw new Exception("GitHub retry request failed (HTTP "+rr.code+"): "+rr.body);
+                setStatus("Retry accepted. Reusing the previous request and cached completed segments…");
+                for(int i=0;i<2160;i++){
+                    Thread.sleep(10000);
+                    ApiResponse sr=api("GET",API+"/actions/runs/"+id,token,null);
+                    if(sr.code!=200)throw new Exception("Retry status failed (HTTP "+sr.code+"): "+sr.body);
+                    JSONObject run=new JSONObject(sr.body);String state=run.optString("status","unknown"),result=run.optString("conclusion","");
+                    setStatus("Retry render "+state+" / "+result+"\\nRun ID: "+id);
+                    if("completed".equals(state)){
+                        if(!"success".equals(result))throw new Exception("Retry finished with result: "+result);
+                        setStatus("Retry complete. Downloading MP4…");downloadArtifact(id);return;
+                    }
+                }
+                setStatus("Retry is still running. Use CHECK RENDER STATUS when ready.");
+            }catch(Exception e){setStatus("Retry error: "+e.getMessage());}
             finally{setBusy(false);}
         }).start();
     }
