@@ -269,7 +269,8 @@ public class MainActivity extends Activity {
         setBusy(true);setStatus("Sending render request to GitHub Actions…");
         new Thread(()->{
             try{
-                JSONObject inputs=new JSONObject();inputs.put("style",style);inputs.put("duration",duration);inputs.put("resolution",resolution);inputs.put("request_id",requestId);\n                inputs.put("project_json",projectJson);
+                JSONObject inputs=new JSONObject();inputs.put("style",style);inputs.put("duration",duration);inputs.put("resolution",resolution);inputs.put("request_id",requestId);
+                inputs.put("project_json",projectJson);
                 JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
                 ApiResponse dispatched=api("POST",API+"/actions/workflows/"+WORKFLOW+"/dispatches",token,payload.toString());
                 if(dispatched.code!=204)throw new Exception("Workflow dispatch failed (HTTP "+dispatched.code+"): "+dispatched.body);
