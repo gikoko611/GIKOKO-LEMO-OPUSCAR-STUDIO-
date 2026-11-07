@@ -36,6 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m py_compile scripts/render_video.py scripts/audio_pipeline.py
+          node --check scripts/animation_runtime.js
           cat > "$RUNNER_TEMP/sample-project.json" <<'JSON'
           {
             "title": "G.I KO KO Render Smoke Test",
@@ -46,11 +47,13 @@ jobs:
               {"english": "Let's begin!", "myanmar": "စတင်ကြစို့။"}
             ],
             "duration_minutes": "1",
-            "style": "cartoon2d"
+            "style": "cartoon2d",
+            "animation_code": "function(api){ api.scene({title:'Sandbox Test', description:'AI-authored scene plan', duration:3, background:'#183344', motion:'bounce'}); }"
           }
           JSON
+          node scripts/animation_runtime.js "$RUNNER_TEMP/sample-project.json" "$RUNNER_TEMP/normalized-project.json"
           python scripts/render_video.py \
-            --project "$RUNNER_TEMP/sample-project.json" \
+            --project "$RUNNER_TEMP/normalized-project.json" \
             --duration 3 --offset 0 --resolution 480p \
             --out "$RUNNER_TEMP/gikoko-render-smoke.mp4"
           python scripts/audio_pipeline.py \
