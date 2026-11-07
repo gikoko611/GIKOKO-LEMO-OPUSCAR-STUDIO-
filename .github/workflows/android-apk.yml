@@ -6,7 +6,11 @@ on:
       - "app/**"
       - "*.gradle"
       - "gradle.properties"
+      - "scripts/**"
+      - "films/**"
+      - "docs/**"
       - ".github/workflows/android-apk.yml"
+      - ".github/workflows/cloud-render.yml"
 permissions:
   contents: read
 jobs:
@@ -25,6 +29,20 @@ jobs:
           curl -L --fail --retry 3 https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip"
           unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Set up Python for pipeline checks
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate audio pipeline and renderer JavaScript
+        run: |
+          python -m py_compile scripts/audio_pipeline.py
+          node - <<'NODE'
+          const fs = require("fs");
+          const html = fs.readFileSync("films/demo/index.html", "utf8").replace("/*__GI_PROJECT__*/", "{}");
+          const js = html.match(/<script>([\\s\\S]*?)<\\/script>/)[1];
+          new Function(js);
+          console.log("Audio pipeline and renderer syntax checks passed.");
+          NODE
       - name: Build APK
         run: gradle --no-daemon --stacktrace assembleDebug
       - name: Verify APK
