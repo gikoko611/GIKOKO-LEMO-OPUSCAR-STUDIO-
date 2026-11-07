@@ -49,6 +49,7 @@ public class MainActivity extends Activity {
     private Spinner voiceSpinner;
     private CheckBox musicCheck,sfxCheck,subtitleCheck;
     private String token;
+    private String animationCode="";
     private boolean busy=false,pendingStart=false;
 
     @Override public void onCreate(Bundle b){
@@ -139,6 +140,7 @@ public class MainActivity extends Activity {
         try{
             p.put("schema_version",1);p.put("title",titleInput.getText().toString().trim());
             p.put("prompt",promptInput.getText().toString().trim());p.put("character_bible",characterInput.getText().toString().trim());
+            if(animationCode!=null&&!animationCode.trim().isEmpty())p.put("animation_code",animationCode);
             JSONArray scenes=new JSONArray();for(String line:sceneInput.getText().toString().split("\n"))if(!line.trim().isEmpty())scenes.put(line.trim());p.put("scenes",scenes);
             JSONArray dialogue=new JSONArray();for(String line:dialogueInput.getText().toString().split("\n"))if(!line.trim().isEmpty()){
                 String[] parts=line.split("\\|",2);JSONObject d=new JSONObject();d.put("english",parts[0].trim());d.put("myanmar",parts.length>1?parts[1].trim():"");dialogue.put(d);
@@ -155,6 +157,7 @@ public class MainActivity extends Activity {
         String raw=prefs().getString("last_project",null);if(raw==null)return;
         try{JSONObject p=new JSONObject(raw);titleInput.setText(p.optString("title",""));promptInput.setText(p.optString("prompt",""));characterInput.setText(p.optString("character_bible",""));
             JSONArray a=p.optJSONArray("scenes");if(a!=null){StringBuilder b=new StringBuilder();for(int i=0;i<a.length();i++)b.append(a.getString(i)).append("\n");sceneInput.setText(b.toString());}
+            animationCode=p.optString("animation_code","");
             JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(b.toString());}
             musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("myanmar_subtitles",true));
             setSpinnerValue(styleSpinner,p.optString("style","cartoon2d"));setSpinnerValue(durationSpinner,p.optString("duration_minutes","1"));setSpinnerValue(resolutionSpinner,p.optString("resolution","480p"));setSpinnerValue(voiceSpinner,p.optString("voice","No voice-over"));
@@ -175,6 +178,7 @@ public class MainActivity extends Activity {
             }
             titleInput.setText(story.optString("title","Untitled Story"));
             characterInput.setText(story.optString("character_bible",""));
+            animationCode=story.optString("animation_code","");
             JSONArray sc=story.optJSONArray("scenes");StringBuilder sb=new StringBuilder();
             if(sc!=null)for(int i=0;i<sc.length();i++)sb.append(sc.optString(i)).append("\n");
             sceneInput.setText(sb.toString());
