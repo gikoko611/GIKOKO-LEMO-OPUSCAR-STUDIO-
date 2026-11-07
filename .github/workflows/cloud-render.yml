@@ -9,30 +9,25 @@ on:
         required: true
         type: choice
         default: cartoon2d
-        options:
-          - cartoon2d
-          - cartoon3d
-          - cinematic
+        options: [cartoon2d, cartoon3d, cinematic]
       duration:
         description: "Video duration (minutes)"
         required: true
         type: choice
         default: "1"
-        options:
-          - "1"
-          - "5"
-          - "10"
-          - "30"
+        options: ["1", "5", "10", "30"]
       resolution:
         description: "Export resolution"
         required: true
         type: choice
         default: 480p
-        options:
-          - 480p
-          - 720p
+        options: [480p, 720p]
       request_id:
         description: "Unique APK request identifier"
+        required: true
+        type: string
+      project_json:
+        description: "Story, scenes, character bible, dialogue and audio settings JSON"
         required: true
         type: string
 
@@ -45,17 +40,18 @@ concurrency:
 
 jobs:
   render:
-    name: Render ${{ inputs.duration }} minute ${{ inputs.style }} film
+    name: Story render and audio export
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
-      - name: Checkout G.I KO KO Studio
+      - name: Checkout Studio project
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg and system dependencies
+      - name: Install FFmpeg, fonts and system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg git python3-venv
+          sudo apt-get install -y ffmpeg git python3-venv fonts-noto-core fonts-noto-extra fontconfig
+          fc-cache -f
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -67,39 +63,110 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Get Lemo-Opuscar renderer and dependencies
+      - name: Get Lemo-Opuscar renderer and core dependencies
         run: |
           git clone --depth 1 https://github.com/lemomo-ai/lemo-opuscar.git "$RUNNER_TEMP/lemo-opuscar"
           cd "$RUNNER_TEMP/lemo-opuscar"
           sh plugin/skills/lemo-opuscar/scripts/setup.sh deps
 
-      - name: Render selected film
+      - name: Install optional bilingual TTS engine
+        run: python -m pip install --disable-pip-version-check edge-tts
+
+      - name: Prepare project and renderer scene
+        env:
+          PROJECT_JSON: ${{ inputs.project_json }}
+          STYLE: ${{ inputs.style }}
+        run: |
+          printf '%s' "$PROJECT_JSON" > "$GITHUB_WORKSPACE/project.json"
+          python - <<'PY'
+          import json, pathlib
+          project=json.loads(pathlib.Path("project.json").read_text(encoding="utf-8"))
+          source=pathlib.Path("films/demo/index.html")
+          html=source.read_text(encoding="utf-8")
+          html=html.replace("/*__GI_PROJECT__*/", json.dumps(project, ensure_ascii=False))
+          source.write_text(html, encoding="utf-8")
+          if not project.get("scenes"):
+              raise SystemExit("Project has no scenes. Add at least one scene in the APK.")
+          PY
+
+      - name: Restore completed render segments
+        uses: actions/cache@v4
+        with:
+          path: output/segments
+          key: lemo-segments-${{ inputs.request_id }}-${{ runner.os }}
+          restore-keys: |
+            lemo-segments-${{ inputs.request_id }}-
+
+      - name: Render video in recoverable one-minute segments
         env:
           STYLE: ${{ inputs.style }}
           DURATION: ${{ inputs.duration }}
           RESOLUTION: ${{ inputs.resolution }}
           REQUEST_ID: ${{ inputs.request_id }}
         run: |
-          case "$RESOLUTION" in
-            720p) SIZE="1280x720" ;;
-            *) SIZE="854x480" ;;
-          esac
-
-          mkdir -p "$GITHUB_WORKSPACE/output"
+          set -euo pipefail
+          case "$RESOLUTION" in 720p) SIZE="1280x720";; *) SIZE="854x480";; esac
+          TOTAL=$((DURATION * 60))
+          mkdir -p output/segments
           cd "$RUNNER_TEMP/lemo-opuscar"
-          node core/render/video.mjs "$GITHUB_WORKSPACE/films/demo" \
-            --fps 24 \
-            --workers 2 \
-            --size "$SIZE" \
-            --q "style=$STYLE&duration=$((DURATION * 60))" \
-            --out "$GITHUB_WORKSPACE/output/GI-KO-KO-$STYLE-${DURATION}min-$RESOLUTION-$REQUEST_ID.mp4"
+          INDEX=0
+          for ((OFFSET=0; OFFSET<TOTAL; OFFSET+=60)); do
+            REMAINING=$((TOTAL-OFFSET))
+            SEGMENT_SECONDS=$((REMAINING<60 ? REMAINING : 60))
+            SEGMENT=$(printf "output/segments/segment_%03d.mp4" "$INDEX")
+            if [ -s "$GITHUB_WORKSPACE/$SEGMENT" ]; then
+              echo "RESUME: segment $INDEX already exists; skipping."
+              INDEX=$((INDEX+1)); continue
+            fi
+            echo "RENDER_SEGMENT=$INDEX OFFSET=$OFFSET DURATION=$SEGMENT_SECONDS"
+            SUCCESS=0
+            for ATTEMPT in 1 2 3; do
+              echo "Segment $INDEX attempt $ATTEMPT/3"
+              if node core/render/video.mjs "$GITHUB_WORKSPACE/films/demo" \
+                --fps 24 --workers 2 --size "$SIZE" \
+                --q "style=$STYLE&duration=$SEGMENT_SECONDS&offset=$OFFSET" \
+                --out "$GITHUB_WORKSPACE/$SEGMENT"; then
+                SUCCESS=1; break
+              fi
+              rm -f "$GITHUB_WORKSPACE/$SEGMENT"
+              sleep $((ATTEMPT*5))
+            done
+            [ "$SUCCESS" -eq 1 ] || { echo "Segment $INDEX failed after 3 attempts"; exit 1; }
+            INDEX=$((INDEX+1))
+          done
 
-          test -s "$GITHUB_WORKSPACE/output/GI-KO-KO-$STYLE-${DURATION}min-$RESOLUTION-$REQUEST_ID.mp4"
+      - name: Join video segments
+        run: |
+          set -euo pipefail
+          find output/segments -maxdepth 1 -name 'segment_*.mp4' -type f | sort | sed "s|^|file '$GITHUB_WORKSPACE/|" | sed "s|$|'|" > output/segments.txt
+          test -s output/segments.txt
+          ffmpeg -y -loglevel error -f concat -safe 0 -i output/segments.txt -c copy output/video_silent.mp4
+          test -s output/video_silent.mp4
 
-      - name: Upload rendered MP4
+      - name: Generate English and Myanmar voice, music, SFX and subtitles
+        run: |
+          python scripts/audio_pipeline.py --project project.json --out output/audio.wav --duration "$((${{ inputs.duration }} * 60))" --work output/audio_work
+
+      - name: Mux MP4 with audio and subtitle track
+        run: |
+          set -euo pipefail
+          if [ -f output/audio.wav ] && [ -f output/audio.srt ]; then
+            ffmpeg -y -loglevel error -i output/video_silent.mp4 -i output/audio.wav -i output/audio.srt \
+              -map 0:v:0 -map 1:a:0 -map 2:s:0 -c:v copy -c:a aac -b:a 192k -c:s mov_text \
+              -metadata:s:s:0 language=bur -movflags +faststart "output/GI-KO-KO-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}-${{ inputs.request_id }}.mp4"
+          else
+            ffmpeg -y -loglevel error -i output/video_silent.mp4 -i output/audio.wav \
+              -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 192k -movflags +faststart \
+              "output/GI-KO-KO-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}-${{ inputs.request_id }}.mp4"
+          fi
+          test -s output/GI-KO-KO-*.mp4
+
+      - name: Upload final MP4 and subtitle files
         uses: actions/upload-artifact@v4
         with:
           name: GI-KO-KO-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}-${{ inputs.request_id }}
-          path: output/*.mp4
+          path: |
+            output/GI-KO-KO-*.mp4
+            output/audio.srt
           if-no-files-found: error
           retention-days: 7
