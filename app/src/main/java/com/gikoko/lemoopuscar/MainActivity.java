@@ -347,6 +347,24 @@ public class MainActivity extends Activity {
     }
 
     private long lastRunId(){return prefs().getLong(RUN_KEY,-1);}
+    private String getRunProgress(long runId){
+        try{
+            ApiResponse r=api("GET",API+"/actions/runs/"+runId+"/jobs?per_page=30",token,null);
+            if(r.code!=200)return "";
+            JSONArray jobs=new JSONObject(r.body).optJSONArray("jobs");if(jobs==null)return "";
+            int done=0,total=0;String current="";
+            for(int i=0;i<jobs.length();i++){
+                JSONArray steps=jobs.getJSONObject(i).optJSONArray("steps");if(steps==null)continue;
+                for(int j=0;j<steps.length();j++){
+                    JSONObject step=steps.getJSONObject(j);total++;
+                    String state=step.optString("status","");
+                    if("completed".equals(state))done++;
+                    if("in_progress".equals(state))current=step.optString("name","");
+                }
+            }
+            return "Steps "+done+"/"+total+(current.isEmpty()?"":" — "+current);
+        }catch(Exception ignored){return "";}
+    }
     private void checkLastRun(){
         if(token==null){setStatus("Save your GitHub token first.");return;}
         long id=lastRunId();if(id<=0){setStatus("No render run saved yet.");return;}
