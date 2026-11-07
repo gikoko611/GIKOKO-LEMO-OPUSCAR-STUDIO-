@@ -266,6 +266,10 @@ public class MainActivity extends Activity {
         final String duration=durationSpinner.getSelectedItem().toString();
         final String resolution=resolutionSpinner.getSelectedItem().toString();
         final String requestId=UUID.randomUUID().toString().replace("-","").substring(0,12);
+        final String projectJson=buildProject().toString();
+        JSONObject projectCheck=buildProject();
+        if(projectJson.length()>45000){setStatus("Project is too large. Shorten the prompt/dialogue and try again.");return;}
+        if(projectCheck.optJSONArray("scenes")==null||projectCheck.optJSONArray("scenes").length()==0){setStatus("Add at least one scene before rendering.");return;}
         setBusy(true);setStatus("Sending render request to GitHub Actions…");
         new Thread(()->{
             try{
