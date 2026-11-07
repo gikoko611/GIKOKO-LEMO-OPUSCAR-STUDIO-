@@ -149,12 +149,13 @@ public class MainActivity extends Activity {
     private void saveProject(){
         JSONObject p=buildProject();String raw=p.toString();prefs().edit().putString("last_project",raw).apply();setStatus("Project saved on this phone ("+raw.length()+" characters).");
     }
-    private void restoreProject(){
+    private void setSpinnerValue(Spinner spinner,String value){for(int i=0;i<spinner.getCount();i++)if(spinner.getItemAtPosition(i).toString().equals(value)){spinner.setSelection(i);return;}}\n    private void restoreProject(){
         String raw=prefs().getString("last_project",null);if(raw==null)return;
         try{JSONObject p=new JSONObject(raw);titleInput.setText(p.optString("title",""));promptInput.setText(p.optString("prompt",""));characterInput.setText(p.optString("character_bible",""));
             JSONArray a=p.optJSONArray("scenes");if(a!=null){StringBuilder b=new StringBuilder();for(int i=0;i<a.length();i++)b.append(a.getString(i)).append("\n");sceneInput.setText(b.toString());}
             JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(b.toString());}
             musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("myanmar_subtitles",true));
+            setSpinnerValue(styleSpinner,p.optString("style","cartoon2d"));setSpinnerValue(durationSpinner,p.optString("duration_minutes","1"));setSpinnerValue(resolutionSpinner,p.optString("resolution","480p"));setSpinnerValue(voiceSpinner,p.optString("voice","No voice-over"));
         }catch(Exception ignored){}
     }
     private void assistStory(){
@@ -277,7 +278,7 @@ public class MainActivity extends Activity {
         JSONObject projectCheck=buildProject();
         if(projectJson.length()>45000){setStatus("Project is too large. Shorten the prompt/dialogue and try again.");return;}
         if(projectCheck.optJSONArray("scenes")==null||projectCheck.optJSONArray("scenes").length()==0){setStatus("Add at least one scene before rendering.");return;}
-        setBusy(true);setStatus("Sending render request to GitHub Actions…");
+        prefs().edit().putString("last_project",projectJson).apply();\n        setBusy(true);setStatus("Sending render request to GitHub Actions…");
         new Thread(()->{
             try{
                 JSONObject inputs=new JSONObject();inputs.put("style",style);inputs.put("duration",duration);inputs.put("resolution",resolution);inputs.put("request_id",requestId);
