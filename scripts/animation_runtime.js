@@ -22,6 +22,8 @@ const api = Object.freeze({
     plan.push({title, description, background, duration, motion});
   }
 });
+Object.setPrototypeOf(api.scene, null);
+Object.freeze(api.scene);
 if (source) {
   if (source.length > 24000) throw new Error("Generated animation code exceeds 24 KB");
   const context = vm.createContext({api, Math, JSON, Number, String, Array, Object}, {codeGeneration:{strings:false,wasm:false}});
