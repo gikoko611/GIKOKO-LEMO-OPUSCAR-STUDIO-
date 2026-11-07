@@ -17,7 +17,8 @@ const api = Object.freeze({
     const description = String(value.description || "").slice(0, 500);
     const rawColor = String(value.background || "#142b2a");
     const background = /^#[0-9a-fA-F]{6}$/.test(rawColor) ? rawColor : "#142b2a";
-    const duration = Math.max(1, Math.min(600, Number(value.duration) || 10));
+    const requestedDuration = Number(value.duration);
+    const duration = Number.isFinite(requestedDuration) ? Math.max(1, Math.min(600, requestedDuration)) : 10;
     const motion = allowedMotion.has(value.motion) ? value.motion : "float";
     plan.push({title, description, background, duration, motion});
   }
