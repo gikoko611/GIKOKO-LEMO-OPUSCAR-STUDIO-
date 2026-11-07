@@ -24,7 +24,7 @@ const api = Object.freeze({
 });
 if (source) {
   if (source.length > 24000) throw new Error("Generated animation code exceeds 24 KB");
-  const context = vm.createContext({api, Math, JSON, Number, String, Array, Object});
+  const context = vm.createContext({api, Math, JSON, Number, String, Array, Object}, {codeGeneration:{strings:false,wasm:false}});
   new vm.Script('"use strict"; (' + source + ')(api);', {filename:"ai-animation.js"}).runInContext(context, {timeout:1500});
 }
 if (!plan.length) {
