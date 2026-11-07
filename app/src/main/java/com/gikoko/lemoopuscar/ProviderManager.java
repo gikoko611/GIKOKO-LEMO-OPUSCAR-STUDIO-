@@ -176,8 +176,8 @@ public class ProviderManager {
                 try{
                     JSONObject body=new JSONObject();body.put("model",model);body.put("temperature",0.7);
                     JSONArray messages=new JSONArray();JSONObject system=new JSONObject();system.put("role","system");
-                    system.put("content","You are a professional animation screenwriter. Return ONLY valid JSON with keys title, character_bible, scenes (array of 4-8 concise scene descriptions), dialogue (array of objects with english and myanmar). Preserve a consistent character design. Keep dialogue concise and suitable for a short animated film.");
-                    JSONObject user=new JSONObject();user.put("role","user");user.put("content","Create a bilingual storyboard. Keep it renderable as a simple animated motion-graphics sequence. Idea: "+prompt);
+                    system.put("content","You are a professional animation screenwriter. Return ONLY valid JSON with keys title, character_bible, scenes (array of 8-30 concise scene descriptions), dialogue (array of 12-60 objects with english and myanmar). Preserve a consistent character design. Keep dialogue concise and suitable for a short animated film.");
+                    JSONObject user=new JSONObject();user.put("role","user");user.put("content","Create a complete bilingual long-form animated storyboard. Include enough distinct scenes and dialogue turns for the requested duration. Keep character design consistent and renderable as a code-driven motion-graphics sequence. Idea: "+prompt);
                     messages.put(system);messages.put(user);body.put("messages",messages);
                     JSONObject response=request(base.replaceAll("/+$","")+"/chat/completions",secret,body.toString());
                     String content=response.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content").trim();
