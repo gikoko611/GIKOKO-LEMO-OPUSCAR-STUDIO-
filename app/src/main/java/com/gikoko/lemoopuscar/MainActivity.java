@@ -45,7 +45,8 @@ public class MainActivity extends Activity {
     private EditText tokenInput,aiBaseInput,aiModelInput,aiKeyInput,titleInput,promptInput,characterInput,sceneInput,dialogueInput;
     private Spinner styleSpinner,durationSpinner,resolutionSpinner;
     private TextView status;
-    private Button startButton,saveButton,checkButton,downloadButton,retryButton;\n    private Spinner voiceSpinner;\n    private CheckBox musicCheck,sfxCheck,subtitleCheck;
+    private Button startButton,saveButton,checkButton,downloadButton,retryButton;
+    private Spinner voiceSpinner;\n    private CheckBox musicCheck,sfxCheck,subtitleCheck;
     private String token;
     private boolean busy=false,pendingStart=false;
 
@@ -113,7 +114,10 @@ public class MainActivity extends Activity {
         downloadButton=button("DOWNLOAD LATEST MP4");root.addView(downloadButton);downloadButton.setOnClickListener(v->downloadLastRun());
         status=label(token==null?"Status: Add your GitHub token to begin.":"Status: Ready — token encrypted on this device.",14);root.addView(status);
         root.addView(label("No GitHub Actions page is needed. The APK starts the workflow, checks status and downloads the MP4. Render time and GitHub usage limits apply. Artifacts expire after 7 days.",12));
-        setContentView(scroll);\n        restoreProject();\n        aiBaseInput.setText(prefs().getString("ai_base","https://api.openai.com/v1"));\n        aiModelInput.setText(prefs().getString("ai_model","gpt-4o-mini"));
+        setContentView(scroll);
+        restoreProject();
+        aiBaseInput.setText(prefs().getString("ai_base","https://api.openai.com/v1"));
+        aiModelInput.setText(prefs().getString("ai_model","gpt-4o-mini"));
     }
 
     private EditText edit(String value,String hint,boolean secret){
@@ -147,7 +151,7 @@ public class MainActivity extends Activity {
     private void restoreProject(){
         String raw=prefs().getString("last_project",null);if(raw==null)return;
         try{JSONObject p=new JSONObject(raw);titleInput.setText(p.optString("title",""));promptInput.setText(p.optString("prompt",""));characterInput.setText(p.optString("character_bible",""));
-            JSONArray a=p.optJSONArray("scenes");if(a!=null){StringBuilder b=new StringBuilder();for(int i=0;i<a.length();i++)b.append(a.getString(i)).append("\\n");sceneInput.setText(b.toString());}
+            JSONArray a=p.optJSONArray("scenes");if(a!=null){StringBuilder b=new StringBuilder();for(int i=0;i<a.length();i++)b.append(a.getString(i)).append("\n");sceneInput.setText(b.toString());}
             JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\\n");}dialogueInput.setText(b.toString());}
             musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("myanmar_subtitles",true));
         }catch(Exception ignored){}
