@@ -1,4 +1,5 @@
 name: G.I KO KO Cloud Render
+run-name: G.I KO KO Render - ${{ inputs.request_id }}
 
 on:
   workflow_dispatch:
@@ -30,12 +31,16 @@ on:
         options:
           - 480p
           - 720p
+      request_id:
+        description: "Unique APK request identifier"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: lemo-opuscar-render
+  group: lemo-opuscar-${{ inputs.request_id }}
   cancel-in-progress: false
 
 jobs:
@@ -56,14 +61,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: ""
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Get Lemo-Opuscar renderer
+      - name: Get Lemo-Opuscar renderer and dependencies
         run: |
           git clone --depth 1 https://github.com/lemomo-ai/lemo-opuscar.git "$RUNNER_TEMP/lemo-opuscar"
           cd "$RUNNER_TEMP/lemo-opuscar"
@@ -74,27 +78,28 @@ jobs:
           STYLE: ${{ inputs.style }}
           DURATION: ${{ inputs.duration }}
           RESOLUTION: ${{ inputs.resolution }}
+          REQUEST_ID: ${{ inputs.request_id }}
         run: |
           case "$RESOLUTION" in
             720p) SIZE="1280x720" ;;
             *) SIZE="854x480" ;;
           esac
 
-          mkdir -p output
+          mkdir -p "$GITHUB_WORKSPACE/output"
           cd "$RUNNER_TEMP/lemo-opuscar"
           node core/render/video.mjs "$GITHUB_WORKSPACE/films/demo" \
             --fps 24 \
             --workers 2 \
             --size "$SIZE" \
             --q "style=$STYLE&duration=$((DURATION * 60))" \
-            --out "$GITHUB_WORKSPACE/output/GI-KO-KO-$STYLE-${DURATION}min-$RESOLUTION.mp4"
+            --out "$GITHUB_WORKSPACE/output/GI-KO-KO-$STYLE-${DURATION}min-$RESOLUTION-$REQUEST_ID.mp4"
 
-          test -s "$GITHUB_WORKSPACE/output/GI-KO-KO-$STYLE-${DURATION}min-$RESOLUTION.mp4"
+          test -s "$GITHUB_WORKSPACE/output/GI-KO-KO-$STYLE-${DURATION}min-$RESOLUTION-$REQUEST_ID.mp4"
 
       - name: Upload rendered MP4
         uses: actions/upload-artifact@v4
         with:
-          name: GI-KO-KO-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}
+          name: GI-KO-KO-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}-${{ inputs.request_id }}
           path: output/*.mp4
           if-no-files-found: error
           retention-days: 7
