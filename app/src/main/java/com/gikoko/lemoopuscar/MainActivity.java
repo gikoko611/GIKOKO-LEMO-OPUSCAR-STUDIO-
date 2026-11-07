@@ -94,7 +94,7 @@ public class MainActivity extends Activity {
         Button saveProject=button("SAVE PROJECT");root.addView(saveProject);saveProject.setOnClickListener(v->saveProject());
 
         root.addView(label("AUDIO & SUBTITLE ENGINE",18));
-        voiceSpinner=spinner(new String[]{"No voice-over","English voice-over (provider required)","Myanmar voice-over (provider required)"});root.addView(voiceSpinner);
+        voiceSpinner=spinner(new String[]{"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"});root.addView(voiceSpinner);
         musicCheck=new CheckBox(this);musicCheck.setText("Background Music");musicCheck.setTextColor(Color.WHITE);musicCheck.setChecked(true);root.addView(musicCheck);
         sfxCheck=new CheckBox(this);sfxCheck.setText("Sound Effects");sfxCheck.setTextColor(Color.WHITE);sfxCheck.setChecked(true);root.addView(sfxCheck);
         subtitleCheck=new CheckBox(this);subtitleCheck.setText("Myanmar Subtitles (SRT track)");subtitleCheck.setTextColor(Color.WHITE);subtitleCheck.setChecked(true);root.addView(subtitleCheck);
@@ -269,7 +269,7 @@ public class MainActivity extends Activity {
         setBusy(true);setStatus("Sending render request to GitHub Actions…");
         new Thread(()->{
             try{
-                JSONObject inputs=new JSONObject();inputs.put("style",style);inputs.put("duration",duration);inputs.put("resolution",resolution);inputs.put("request_id",requestId);\n                String project=buildProject().toString();\n                if(project.length()>45000)throw new Exception("Project is too large. Shorten the prompt/dialogue and try again.");\n                inputs.put("project_json",project);
+                JSONObject inputs=new JSONObject();inputs.put("style",style);inputs.put("duration",duration);inputs.put("resolution",resolution);inputs.put("request_id",requestId);\n                inputs.put("project_json",projectJson);
                 JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
                 ApiResponse dispatched=api("POST",API+"/actions/workflows/"+WORKFLOW+"/dispatches",token,payload.toString());
                 if(dispatched.code!=204)throw new Exception("Workflow dispatch failed (HTTP "+dispatched.code+"): "+dispatched.body);
