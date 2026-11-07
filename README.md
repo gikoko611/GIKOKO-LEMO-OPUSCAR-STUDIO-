@@ -14,11 +14,12 @@
 
 ### 2. Story & Timeline Engine
 - OpenAI-compatible AI Story Assistant: configure Base URL, model and API key in the APK.
-- AI drafts title, character bible, scenes and English/Myanmar dialogue as JSON.
+- AI drafts title, character bible, scenes, English/Myanmar dialogue and a JavaScript animation scene-plan function as JSON.
+- The generated function calls a small `api.scene(...)` interface to define scene title, description, timing, background color and motion cue.
 - Edit all fields manually and save locally.
-- The self-contained FFmpeg/Python renderer generates MP4 segments directly from the saved project; it does not depend on a third-party renderer repository.
+- GitHub Actions runs the generated scene-plan function in a restricted Node.js VM (no filesystem, network, process or module APIs; dynamic code generation disabled), validates the result, then the self-contained FFmpeg/Python renderer generates MP4 segments directly from the saved project.
 - Scene titles, character bible, recurring character animation, bilingual dialogue overlays and a full-film progress timeline are rendered into the video.
-- AI-generated story data drives the scene timeline. Visual output is procedural motion graphics, not photorealistic AI-generated footage or text-to-video output.
+- AI-generated scene code drives scene timing, backgrounds, titles, descriptions and mascot motion cues. Visual output remains procedural motion graphics, not photorealistic AI-generated footage or unrestricted arbitrary JavaScript animation.
 
 ### 3. Audio & Subtitle Engine
 - English voice: Edge TTS en-US-GuyNeural.
