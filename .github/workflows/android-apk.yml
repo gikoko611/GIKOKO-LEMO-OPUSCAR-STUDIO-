@@ -7,8 +7,6 @@ on:
       - "*.gradle"
       - "gradle.properties"
       - "scripts/**"
-      - "films/**"
-      - "docs/**"
       - ".github/workflows/android-apk.yml"
       - ".github/workflows/cloud-render.yml"
 permissions:
@@ -16,7 +14,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Set up Java 17
@@ -24,25 +22,44 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Set up Python and validate render engines
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install FFmpeg and renderer dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-core fonts-noto-extra fontconfig
+          fc-cache -f
+          python -m pip install Pillow
+      - name: Validate Python render pipeline
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/render_video.py scripts/audio_pipeline.py
+          cat > "$RUNNER_TEMP/sample-project.json" <<'JSON'
+          {
+            "title": "G.I KO KO Render Smoke Test",
+            "character_bible": "A friendly golden royal guard.",
+            "scenes": ["Palace courtyard", "A funny surprise"],
+            "dialogue": [
+              {"english": "I am ready!", "myanmar": "ကျွန်တော် အသင့်ဖြစ်ပါပြီ။"},
+              {"english": "Let's begin!", "myanmar": "စတင်ကြစို့။"}
+            ],
+            "duration_minutes": "1",
+            "style": "cartoon2d"
+          }
+          JSON
+          python scripts/render_video.py \
+            --project "$RUNNER_TEMP/sample-project.json" \
+            --duration 3 --offset 0 --resolution 480p \
+            --out "$RUNNER_TEMP/gikoko-render-smoke.mp4"
+          ffprobe -v error -show_entries format=duration \
+            -of default=noprint_wrappers=1 "$RUNNER_TEMP/gikoko-render-smoke.mp4"
       - name: Install Gradle 8.9
         run: |
           curl -L --fail --retry 3 https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip"
           unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
-      - name: Set up Python for pipeline checks
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Validate audio pipeline and renderer JavaScript
-        run: |
-          python -m py_compile scripts/audio_pipeline.py
-          node - <<'NODE'
-          const fs = require("fs");
-          const html = fs.readFileSync("films/demo/index.html", "utf8").replace("/*__GI_PROJECT__*/", "{}");
-          const js = html.substring(html.indexOf("<script>") + 8, html.indexOf("</script>"));
-          new Function(js);
-          console.log("Audio pipeline and renderer syntax checks passed.");
-          NODE
       - name: Build APK
         run: gradle --no-daemon --stacktrace assembleDebug
       - name: Verify APK
