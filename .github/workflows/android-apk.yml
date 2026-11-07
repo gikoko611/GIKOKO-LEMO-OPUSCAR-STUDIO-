@@ -39,7 +39,7 @@ jobs:
           node - <<'NODE'
           const fs = require("fs");
           const html = fs.readFileSync("films/demo/index.html", "utf8").replace("/*__GI_PROJECT__*/", "{}");
-          const js = html.match(/<script>([\\s\\S]*?)<\\/script>/)[1];
+          const js = html.substring(html.indexOf("<script>") + 8, html.indexOf("</script>"));
           new Function(js);
           console.log("Audio pipeline and renderer syntax checks passed.");
           NODE
