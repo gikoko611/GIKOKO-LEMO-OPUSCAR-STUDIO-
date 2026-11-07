@@ -1,5 +1,5 @@
 name: G.I KO KO Cloud Render
-run-name: G.I KO KO Render - ${{ inputs.request_id }}
+run-name: G.I KO KO Render - \${{ inputs.request_id }}
 
 on:
   workflow_dispatch:
@@ -35,86 +35,65 @@ permissions:
   contents: read
 
 concurrency:
-  group: lemo-opuscar-${{ inputs.request_id }}
+  group: lemo-opuscar-\${{ inputs.request_id }}
   cancel-in-progress: false
 
 jobs:
   render:
-    name: Story render and audio export
+    name: Code-driven video render and audio export
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
       - name: Checkout Studio project
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg, fonts and system dependencies
+      - name: Install FFmpeg, fonts and Python imaging dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg git python3-venv fonts-noto-core fonts-noto-extra fontconfig
+          sudo apt-get install -y ffmpeg fonts-noto-core fonts-noto-extra fontconfig
           fc-cache -f
+          python -m pip install --upgrade pip
+          python -m pip install Pillow
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Get Lemo-Opuscar renderer and core dependencies
-        run: |
-          git clone --depth 1 https://github.com/lemomo-ai/lemo-opuscar.git "$RUNNER_TEMP/lemo-opuscar"
-          cd "$RUNNER_TEMP/lemo-opuscar"
-          sh plugin/skills/lemo-opuscar/scripts/setup.sh deps
-
-      - name: Install optional bilingual TTS engine
-        run: python -m pip install --disable-pip-version-check edge-tts
-
-      - name: Prepare project and renderer scene
+      - name: Validate project input
         env:
-          PROJECT_JSON: ${{ inputs.project_json }}
-          STYLE: ${{ inputs.style }}
+          PROJECT_JSON: \${{ inputs.project_json }}
         run: |
-          printf '%s' "$PROJECT_JSON" > "$GITHUB_WORKSPACE/project.json"
+          set -euo pipefail
+          mkdir -p output/segments
+          printf '%s' "$PROJECT_JSON" > project.json
           python - <<'PY'
           import json, pathlib
-          project=json.loads(pathlib.Path("project.json").read_text(encoding="utf-8"))
-          source=pathlib.Path("films/demo/index.html")
-          html=source.read_text(encoding="utf-8")
-          html=html.replace("/*__GI_PROJECT__*/", json.dumps(project, ensure_ascii=False))
-          source.write_text(html, encoding="utf-8")
-          if not project.get("scenes"):
-              raise SystemExit("Project has no scenes. Add at least one scene in the APK.")
+          raw=pathlib.Path("project.json").read_text(encoding="utf-8")
+          p=json.loads(raw)
+          if not isinstance(p.get("scenes"), list) or not p["scenes"]:
+              raise SystemExit("Project must contain at least one scene.")
+          if len(raw) > 45000:
+              raise SystemExit("Project JSON exceeds the APK input limit.")
+          print("Project valid:", p.get("title","Untitled"), "| scenes:", len(p["scenes"]))
           PY
 
       - name: Restore completed render segments
         uses: actions/cache@v4
         with:
           path: output/segments
-          key: lemo-segments-${{ inputs.request_id }}-${{ runner.os }}-${{ github.run_attempt }}
+          key: lemo-segments-\${{ inputs.request_id }}-\${{ runner.os }}-\${{ github.run_attempt }}
           restore-keys: |
-            lemo-segments-${{ inputs.request_id }}-
+            lemo-segments-\${{ inputs.request_id }}-\${{ runner.os }}-
 
-      - name: Render video in recoverable one-minute segments
+      - name: Render recoverable one-minute MP4 segments
         env:
-          STYLE: ${{ inputs.style }}
-          DURATION: ${{ inputs.duration }}
-          RESOLUTION: ${{ inputs.resolution }}
-          REQUEST_ID: ${{ inputs.request_id }}
+          DURATION: \${{ inputs.duration }}
+          RESOLUTION: \${{ inputs.resolution }}
         run: |
           set -euo pipefail
-          case "$RESOLUTION" in 720p) SIZE="1280x720";; *) SIZE="854x480";; esac
           TOTAL=$((DURATION * 60))
-          mkdir -p output/segments
-          cd "$RUNNER_TEMP/lemo-opuscar"
           INDEX=0
           for ((OFFSET=0; OFFSET<TOTAL; OFFSET+=60)); do
             REMAINING=$((TOTAL-OFFSET))
             SEGMENT_SECONDS=$((REMAINING<60 ? REMAINING : 60))
             SEGMENT=$(printf "output/segments/segment_%03d.mp4" "$INDEX")
-            if [ -s "$GITHUB_WORKSPACE/$SEGMENT" ]; then
+            if [ -s "$SEGMENT" ]; then
               echo "RESUME: segment $INDEX already exists; skipping."
               INDEX=$((INDEX+1)); continue
             fi
@@ -122,49 +101,67 @@ jobs:
             SUCCESS=0
             for ATTEMPT in 1 2 3; do
               echo "Segment $INDEX attempt $ATTEMPT/3"
-              if node core/render/video.mjs "$GITHUB_WORKSPACE/films/demo" \
-                --fps 24 --workers 2 --size "$SIZE" \
-                --q "style=$STYLE&duration=$SEGMENT_SECONDS&offset=$OFFSET" \
-                --out "$GITHUB_WORKSPACE/$SEGMENT"; then
+              if python scripts/render_video.py \
+                --project project.json \
+                --duration "$SEGMENT_SECONDS" \
+                --offset "$OFFSET" \
+                --resolution "$RESOLUTION" \
+                --out "$SEGMENT"; then
                 SUCCESS=1; break
               fi
-              rm -f "$GITHUB_WORKSPACE/$SEGMENT"
+              rm -f "$SEGMENT"
               sleep $((ATTEMPT*5))
             done
             [ "$SUCCESS" -eq 1 ] || { echo "Segment $INDEX failed after 3 attempts"; exit 1; }
             INDEX=$((INDEX+1))
           done
 
-      - name: Join video segments
+      - name: Join rendered segments
         run: |
           set -euo pipefail
-          find output/segments -maxdepth 1 -name 'segment_*.mp4' -type f | sort | sed "s|^|file '$GITHUB_WORKSPACE/|" | sed "s|$|'|" > output/segments.txt
+          : > output/segments.txt
+          for f in output/segments/segment_*.mp4; do
+            [ -s "$f" ] || continue
+            printf "file '%s/%s'\n" "$GITHUB_WORKSPACE" "$f" >> output/segments.txt
+          done
           test -s output/segments.txt
-          ffmpeg -y -loglevel error -f concat -safe 0 -i output/segments.txt -c copy output/video_silent.mp4
+          ffmpeg -y -hide_banner -loglevel error -f concat -safe 0 \
+            -i output/segments.txt -c copy -movflags +faststart output/video_silent.mp4
           test -s output/video_silent.mp4
 
-      - name: Generate English and Myanmar voice, music, SFX and subtitles
+      - name: Generate bilingual voice, music, SFX and Myanmar subtitles
         run: |
-          python scripts/audio_pipeline.py --project project.json --out output/audio.wav --duration "$((${{ inputs.duration }} * 60))" --work output/audio_work
+          python scripts/audio_pipeline.py \
+            --project project.json \
+            --out output/audio.wav \
+            --duration "$(( \${{ inputs.duration }} * 60 ))" \
+            --work output/audio_work
 
       - name: Mux MP4 with audio and subtitle track
         run: |
           set -euo pipefail
-          if [ -f output/audio.wav ] && [ -f output/audio.srt ]; then
-            ffmpeg -y -loglevel error -i output/video_silent.mp4 -i output/audio.wav -i output/audio.srt \
-              -map 0:v:0 -map 1:a:0 -map 2:s:0 -c:v copy -c:a aac -b:a 192k -c:s mov_text \
-              -metadata:s:s:0 language=bur -movflags +faststart "output/GI-KO-KO-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}-${{ inputs.request_id }}.mp4"
+          if [ -f output/audio.srt ]; then
+            ffmpeg -y -hide_banner -loglevel error \
+              -i output/video_silent.mp4 -i output/audio.wav -i output/audio.srt \
+              -map 0:v:0 -map 1:a:0 -map 2:s:0 \
+              -c:v copy -c:a aac -b:a 160k -c:s mov_text \
+              -metadata:s:s:0 language=bur -movflags +faststart \
+              "output/GI-KO-KO-\${{ inputs.style }}-\${{ inputs.duration }}min-\${{ inputs.resolution }}-\${{ inputs.request_id }}.mp4"
           else
-            ffmpeg -y -loglevel error -i output/video_silent.mp4 -i output/audio.wav \
-              -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 192k -movflags +faststart \
-              "output/GI-KO-KO-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}-${{ inputs.request_id }}.mp4"
+            ffmpeg -y -hide_banner -loglevel error \
+              -i output/video_silent.mp4 -i output/audio.wav \
+              -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 160k \
+              -movflags +faststart \
+              "output/GI-KO-KO-\${{ inputs.style }}-\${{ inputs.duration }}min-\${{ inputs.resolution }}-\${{ inputs.request_id }}.mp4"
           fi
           test -s output/GI-KO-KO-*.mp4
+          ffprobe -v error -show_entries format=duration,size \
+            -of default=noprint_wrappers=1 output/GI-KO-KO-*.mp4
 
       - name: Upload final MP4 and subtitle files
         uses: actions/upload-artifact@v4
         with:
-          name: GI-KO-KO-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}-${{ inputs.request_id }}
+          name: GI-KO-KO-\${{ inputs.style }}-\${{ inputs.duration }}min-\${{ inputs.resolution }}-\${{ inputs.request_id }}
           path: |
             output/GI-KO-KO-*.mp4
             output/audio.srt
