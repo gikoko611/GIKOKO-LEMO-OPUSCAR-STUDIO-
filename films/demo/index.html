@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>G.I KO KO — Cloud Render Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #080b12; }
+    body { display: grid; place-items: center; font-family: Arial, Helvetica, sans-serif; color: #f7e7b0; }
+    .stage {
+      position: relative; width: 100%; height: 100%;
+      display: grid; place-items: center; text-align: center;
+      background:
+        radial-gradient(ellipse at 50% 45%, rgba(184,132,42,.22), transparent 48%),
+        linear-gradient(135deg, #080b12 0%, #142019 52%, #080b12 100%);
+    }
+    .frame { padding: 5vw; transform: translateY(24px); opacity: 0; }
+    .mark { color: #e8bd58; font-size: clamp(42px, 10vw, 112px); font-weight: 900; letter-spacing: .12em; text-shadow: 0 0 28px rgba(232,189,88,.28); }
+    .rule { width: 34%; height: 3px; margin: 24px auto; background: linear-gradient(90deg, transparent, #e8bd58, transparent); }
+    .sub { color: #f7e7b0; font-size: clamp(16px, 3vw, 30px); letter-spacing: .22em; }
+    .credit { margin-top: 28px; color: #b7c4b4; font-size: clamp(12px, 1.8vw, 18px); letter-spacing: .18em; }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <section class="frame" id="frame">
+      <div class="mark">G.I KO KO</div>
+      <div class="rule"></div>
+      <div class="sub">CLOUD RENDER STUDIO</div>
+      <div class="credit">POWERED BY I KO KO</div>
+    </section>
+  </main>
+  <script>
+    window.DUR = 10;
+    window.READY = true;
+    window.render = function (t) {
+      const p = Math.max(0, Math.min(1, t / 2));
+      const frame = document.getElementById("frame");
+      frame.style.opacity = String(p);
+      frame.style.transform = "translateY(" + (24 * (1 - p)) + "px) scale(" + (0.96 + 0.04 * p) + ")";
+    };
+  </script>
+</body>
+</html>
