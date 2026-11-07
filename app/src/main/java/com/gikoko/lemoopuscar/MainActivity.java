@@ -103,7 +103,7 @@ public class MainActivity extends Activity {
         subtitleCheck=new CheckBox(this);subtitleCheck.setText("Myanmar Subtitles (SRT track)");subtitleCheck.setTextColor(Color.WHITE);subtitleCheck.setChecked(true);root.addView(subtitleCheck);
 
         root.addView(label("RENDER SETTINGS",18));
-        root.addView(label("Film Style",14));styleSpinner=spinner(new String[]{"cartoon2d","cartoon3d","cinematic"});root.addView(styleSpinner);
+        root.addView(label("Film Style",14));styleSpinner=spinner(new String[]{"hybrid","cartoon2d","cartoon3d","cinematic"});root.addView(styleSpinner);
         root.addView(label("Duration (minutes)",14));durationSpinner=spinner(new String[]{"1","5","10","30"});root.addView(durationSpinner);
         root.addView(label("Resolution",14));resolutionSpinner=spinner(new String[]{"480p","720p"});root.addView(resolutionSpinner);
 
@@ -165,7 +165,8 @@ public class MainActivity extends Activity {
         String prompt=promptInput.getText().toString().trim();
         if(prompt.isEmpty()){setStatus("Enter a film idea first.");return;}
         setBusy(true);setStatus("AI Director: trying configured providers with automatic fallback…");
-        new ProviderManager(this).generateStory(prompt,(story,err,provider)->{
+        String aiPrompt=prompt+"\nTarget video duration: "+durationSpinner.getSelectedItem().toString()+" minutes. Visual style: "+styleSpinner.getSelectedItem().toString()+". For a 30-minute film, create a detailed long-form story with 18-30 scenes and 30-60 bilingual dialogue turns. Keep the same character appearance and personality throughout.";
+        new ProviderManager(this).generateStory(aiPrompt,(story,err,provider)->{
             if(err!=null){
                 setBusy(false);
                 setStatus("AI provider chain failed: "+err+" — using offline outline helper.");
