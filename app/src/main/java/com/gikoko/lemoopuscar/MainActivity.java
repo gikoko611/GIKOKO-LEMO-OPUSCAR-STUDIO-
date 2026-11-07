@@ -149,7 +149,8 @@ public class MainActivity extends Activity {
     private void saveProject(){
         JSONObject p=buildProject();String raw=p.toString();prefs().edit().putString("last_project",raw).apply();setStatus("Project saved on this phone ("+raw.length()+" characters).");
     }
-    private void setSpinnerValue(Spinner spinner,String value){for(int i=0;i<spinner.getCount();i++)if(spinner.getItemAtPosition(i).toString().equals(value)){spinner.setSelection(i);return;}}\n    private void restoreProject(){
+    private void setSpinnerValue(Spinner spinner,String value){for(int i=0;i<spinner.getCount();i++)if(spinner.getItemAtPosition(i).toString().equals(value)){spinner.setSelection(i);return;}}
+    private void restoreProject(){
         String raw=prefs().getString("last_project",null);if(raw==null)return;
         try{JSONObject p=new JSONObject(raw);titleInput.setText(p.optString("title",""));promptInput.setText(p.optString("prompt",""));characterInput.setText(p.optString("character_bible",""));
             JSONArray a=p.optJSONArray("scenes");if(a!=null){StringBuilder b=new StringBuilder();for(int i=0;i<a.length();i++)b.append(a.getString(i)).append("\n");sceneInput.setText(b.toString());}
