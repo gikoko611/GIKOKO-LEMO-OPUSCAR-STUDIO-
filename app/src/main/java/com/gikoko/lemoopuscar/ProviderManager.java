@@ -79,6 +79,7 @@ public class ProviderManager {
         Button save=new Button(activity);save.setText("SAVE THIS PROVIDER");textBox.addView(save);
         discover.setOnClickListener(v->{
             final String pid=IDS[editProvider.getSelectedItemPosition()],url=base.getText().toString().trim(),secret=readKey(pid,apiKey);
+            final boolean applyFreeOnly=freeOnly.isChecked();
             modelInfo.setText("Loading models…");
             new Thread(()->{try{
                 JSONObject response=request(url.replaceAll("/+$","")+"/models",secret,null);
@@ -87,7 +88,7 @@ public class ProviderManager {
                 for(int i=0;i<data.length();i++){
                     JSONObject item=data.optJSONObject(i);if(item==null)continue;
                     String mid=item.optString("id","");if(mid.isEmpty())continue;
-                    if(freeOnly.isChecked()&&!isFreeModel(pid,item,mid))continue;
+                    if(applyFreeOnly&&!isFreeModel(pid,item,mid))continue;
                     found.add(mid);
                 }
                 activity.runOnUiThread(()->{
