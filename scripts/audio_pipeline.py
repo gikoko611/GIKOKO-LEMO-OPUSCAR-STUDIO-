@@ -49,7 +49,7 @@ def main():
     if subtitles:
         with srt.open("w",encoding="utf-8") as f:
             for i,(a,b,text) in enumerate(entries,1):
-                f.write(f"{i}\\n{stamp(a)} --> {stamp(max(a+0.5,b))}\\n{text}\\n\\n")
+                f.write(f"{i}\n{stamp(a)} --> {stamp(max(a+0.5,b))}\n{text}\n\n")
     else:
         srt=None
 
