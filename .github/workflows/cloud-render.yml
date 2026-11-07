@@ -32,7 +32,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: lemo-opuscar-${{ inputs.request_id }}
@@ -166,6 +166,21 @@ jobs:
           test -s output/GI-KO-KO-*.mp4
           ffprobe -v error -show_entries format=duration,size \
             -of default=noprint_wrappers=1 output/GI-KO-KO-*.mp4
+
+
+      - name: Publish direct MP4 download (GitHub Release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          MP4=$(find output -maxdepth 1 -type f -name 'GI-KO-KO-*.mp4' -print -quit)
+          test -n "$MP4"
+          TAG="render-${GITHUB_RUN_ID}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "G.I KO KO Render ${GITHUB_RUN_ID}" --notes "Direct MP4 export from GitHub Actions run ${GITHUB_RUN_ID}." --latest=false
+          fi
+          gh release upload "$TAG" "$MP4" --clobber
+          echo "DIRECT_MP4_RELEASE_TAG=$TAG"
 
       - name: Upload final MP4 and subtitle files
         uses: actions/upload-artifact@v4
