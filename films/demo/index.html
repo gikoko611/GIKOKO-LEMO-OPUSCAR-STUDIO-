@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>G.I KO KO Professional Film</title>
+<title>G.I KO KO Story Studio</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070a10}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d15}
 canvas{display:block;width:100%;height:100%}
 </style>
 </head>
@@ -13,70 +13,63 @@ canvas{display:block;width:100%;height:100%}
 <canvas id="film"></canvas>
 <script>
 (() => {
-  const params = new URLSearchParams(location.search);
-  const duration = Math.max(60, Number(params.get("duration")) || 60);
-  const style = params.get("style") || "cartoon2d";
-  const canvas = document.getElementById("film");
-  const ctx = canvas.getContext("2d");
-  const W = 1920, H = 1080;
-  canvas.width = W; canvas.height = H;
-  window.DUR = duration;
-  const gold = "#e9c46a", cream = "#fff0c2";
-  const seed = 611;
-  const stars = Array.from({length:150}, (_,i) => ({
-    x: ((i*7919+seed*17)%10000)/10000*W,
-    y: ((i*3571+seed*31)%10000)/10000*H,
-    r: .7+((i*13)%22)/10,
-    p: (i%17)/17
-  }));
+  const params=new URLSearchParams(location.search);
+  const segmentDuration=Math.max(1,Number(params.get("duration"))||60);
+  const offset=Math.max(0,Number(params.get("offset"))||0);
+  const project=/*__GI_PROJECT__*/;
+  const style=params.get("style")||project.style||"cartoon2d";
+  const totalDuration=Math.max(60,Number(project.duration_minutes||1)*60);
+  const scenes=Array.isArray(project.scenes)&&project.scenes.length?project.scenes:["Opening scene","A surprising problem","Action and comic twist","Final reveal"];
+  const dialogue=Array.isArray(project.dialogue)?project.dialogue:[];
+  const canvas=document.getElementById("film"),ctx=canvas.getContext("2d");
+  const W=1920,H=1080;canvas.width=W;canvas.height=H;
+  window.DUR=segmentDuration;
+  const gold="#e9c46a",cream="#fff0c2";
+  const stars=Array.from({length:110},(_,i)=>({x:((i*7919+611*17)%10000)/10000*W,y:((i*3571+611*31)%10000)/10000*H,r:.6+((i*13)%18)/10,p:(i%17)/17}));
   function rounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
-  function render(t) {
-    const phase = (t % 20) / 20;
-    const intro = Math.min(1,t/3);
-    const cinematic = style === "cinematic";
-    const cartoon = style.startsWith("cartoon");
-    const bg = ctx.createLinearGradient(0,0,W,H);
-    bg.addColorStop(0, cinematic ? "#101827" : "#142b2a");
-    bg.addColorStop(.55, cinematic ? "#263348" : "#31564b");
-    bg.addColorStop(1, "#080b12");
-    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-    if(cinematic){
-      const glow=ctx.createRadialGradient(W*.5,H*.48,10,W*.5,H*.48,700);
-      glow.addColorStop(0,"rgba(233,196,106,.25)");glow.addColorStop(1,"rgba(233,196,106,0)");
-      ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
-      ctx.fillStyle="rgba(0,0,0,.3)";ctx.fillRect(0,0,W,130);ctx.fillRect(0,H-130,W,130);
-    } else {
-      ctx.fillStyle="rgba(247,220,150,.12)";
-      ctx.beginPath();ctx.arc(W*.78,H*.25,180+Math.sin(t)*8,0,Math.PI*2);ctx.fill();
-    }
-    stars.forEach(s=>{
-      const a=.25+.65*(.5+.5*Math.sin(t*1.4+s.p*8));
-      ctx.globalAlpha=a;ctx.fillStyle=gold;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
-    });ctx.globalAlpha=1;
-    const drift=Math.sin(t*.65)*24;
-    if(cartoon){
-      // Stylised story-stage silhouettes; a production-ready storyboard can replace these layers.
-      rounded(210,760+drift*.2,1500,190,38,"rgba(4,12,13,.48)");
-      ctx.fillStyle=style==="cartoon3d"?"#d7a84f":"#e7bd6b";
-      ctx.beginPath();ctx.ellipse(W/2,700+drift,155,190,0,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#203c38";ctx.beginPath();ctx.arc(W/2-55,665+drift,17,0,Math.PI*2);ctx.arc(W/2+55,665+drift,17,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle="#203c38";ctx.lineWidth=12;ctx.beginPath();ctx.arc(W/2,715+drift,55,.15,Math.PI-.15);ctx.stroke();
-    }
-    ctx.textAlign="center";
-    ctx.globalAlpha=intro;
-    ctx.fillStyle=gold;ctx.font="900 112px Arial";ctx.fillText("G.I KO KO",W/2,cinematic?430:350);
-    ctx.fillStyle=cream;ctx.font="600 42px Arial";
-    const label=style==="cinematic"?"CINEMATIC FILM":style==="cartoon3d"?"3D CARTOON STORY":"2D CARTOON STORY";
-    ctx.fillText(label,W/2,cinematic?520:435);
-    ctx.fillStyle="rgba(255,240,194,.8)";ctx.font="28px Arial";
-    ctx.fillText("POWERED BY I KO KO",W/2,cinematic?610:510);
-    ctx.globalAlpha=1;
-    const barW=520;rounded((W-barW)/2,H-170,barW,5,3,"rgba(255,255,255,.2)");
-    rounded((W-barW)/2,H-170,barW*phase,5,3,gold);
+  function wrap(text,maxWidth,font){
+    ctx.font=font;const words=String(text||"").split(/\s+/);let lines=[],line="";
+    for(const word of words){const test=line?line+" "+word:word;if(ctx.measureText(test).width>maxWidth&&line){lines.push(line);line=word}else line=test}
+    if(line)lines.push(line);return lines.slice(0,3);
   }
-  window.render=render;
-  window.READY=true;
-  render(0);
+  function render(localTime){
+    const t=Math.max(0,localTime+offset),sceneDuration=totalDuration/scenes.length;
+    const sceneIndex=Math.min(scenes.length-1,Math.floor(t/sceneDuration));
+    const scene=scenes[sceneIndex]||"Scene";
+    const sceneT=(t%sceneDuration)/sceneDuration;
+    const cinematic=style==="cinematic",cartoon=style.startsWith("cartoon");
+    const palette=cinematic?[["#101827","#263348"],["#17202c","#3a4050"],["#1b1825","#4b3440"],["#111c24","#31505a"]]:[["#142b2a","#31564b"],["#263c4b","#4a5963"],["#49352a","#76533d"],["#263b32","#4f6650"]];
+    const colors=palette[sceneIndex%palette.length],bg=ctx.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0,colors[0]);bg.addColorStop(1,colors[1]);ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    if(cinematic){const glow=ctx.createRadialGradient(W*.5,H*.46,10,W*.5,H*.46,720);glow.addColorStop(0,"rgba(233,196,106,.23)");glow.addColorStop(1,"rgba(233,196,106,0)");ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);ctx.fillStyle="rgba(0,0,0,.32)";ctx.fillRect(0,0,W,125);ctx.fillRect(0,H-125,W,125)}
+    else{ctx.fillStyle="rgba(247,220,150,.10)";ctx.beginPath();ctx.arc(W*.78,H*.23,170+Math.sin(t)*10,0,Math.PI*2);ctx.fill()}
+    stars.forEach(s=>{ctx.globalAlpha=.2+.7*(.5+.5*Math.sin(t*1.2+s.p*8));ctx.fillStyle=gold;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill()});ctx.globalAlpha=1;
+    const move=Math.sin(sceneT*Math.PI*2)*38;
+    // Reuse the same visual identity across every scene to keep the character silhouette consistent.
+    if(cartoon){
+      rounded(180,790,1560,150,35,"rgba(3,10,12,.48)");
+      ctx.fillStyle=style==="cartoon3d"?"#d7a84f":"#e7bd6b";ctx.beginPath();ctx.ellipse(W/2+move,690,155,190,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#203c38";ctx.beginPath();ctx.arc(W/2-55+move,655,17,0,Math.PI*2);ctx.arc(W/2+55+move,655,17,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="#203c38";ctx.lineWidth=12;ctx.beginPath();ctx.arc(W/2+move,710,55,.15,Math.PI-.15);ctx.stroke();
+      // simple crown marker
+      ctx.fillStyle=gold;ctx.beginPath();ctx.moveTo(W/2-85+move,505);ctx.lineTo(W/2-65+move,455);ctx.lineTo(W/2-25+move,495);ctx.lineTo(W/2+5+move,445);ctx.lineTo(W/2+38+move,495);ctx.lineTo(W/2+78+move,460);ctx.lineTo(W/2+88+move,515);ctx.closePath();ctx.fill();
+    }else{
+      ctx.fillStyle="rgba(5,8,14,.65)";ctx.beginPath();ctx.ellipse(W/2+move,760,150,230,0,Math.PI,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#d8ad70";ctx.beginPath();ctx.arc(W/2+move,540,85,0,Math.PI*2);ctx.fill();
+    }
+    const fade=Math.min(1,t/2);
+    ctx.globalAlpha=fade;ctx.textAlign="center";
+    ctx.fillStyle=gold;ctx.font="900 82px Arial";ctx.fillText(String(project.title||"G.I KO KO").slice(0,44),W/2,190);
+    ctx.fillStyle=cream;ctx.font="600 36px Arial";ctx.fillText("SCENE "+(sceneIndex+1)+" / "+scenes.length,W/2,255);
+    const lines=wrap(scene,1450,"600 43px Arial");ctx.fillStyle=cream;lines.forEach((line,i)=>ctx.fillText(line,W/2,345+i*55));
+    ctx.font="28px Arial";ctx.fillStyle="rgba(255,240,194,.78)";ctx.fillText("POWERED BY I KO KO",W/2,450);
+    const dIndex=Math.min(dialogue.length-1,Math.floor(t/Math.max(1,totalDuration/Math.max(1,dialogue.length))));
+    const d=dialogue[dIndex];const sub=d?(d.myanmar||d.english||""):"";
+    if(sub){rounded(180,875,1560,105,20,"rgba(0,0,0,.68)");ctx.fillStyle="#fff";ctx.font="32px sans-serif";const sl=wrap(sub,1450,"32px sans-serif");sl.forEach((line,i)=>ctx.fillText(line,W/2,920+i*38))}
+    ctx.globalAlpha=1;
+    const barW=700;rounded((W-barW)/2,H-65,barW,6,3,"rgba(255,255,255,.22)");rounded((W-barW)/2,H-65,barW*Math.max(0,Math.min(1,t/totalDuration)),6,3,gold);
+  }
+  window.render=render;window.READY=true;render(0);
 })();
 </script>
 </body>
