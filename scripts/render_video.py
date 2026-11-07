@@ -52,6 +52,7 @@ def main():
     width,height=(1280,720) if a.resolution=="720p" else (854,480)
     palettes={"cartoon2d":["0x142b2a","0x263c4b","0x49352a","0x263b32"],
               "cartoon3d":["0x172a36","0x28394e","0x4b3429","0x263d36"],
+              "hybrid":["0x101827","0x264a52","0x45312c","0x1b2d3a"],
               "cinematic":["0x101827","0x1a2638","0x2b202e","0x162b35"]}
     style=str(p.get("style","cartoon2d")).lower(); palette=palettes.get(style,palettes["cartoon2d"])
     out=Path(a.out); out.parent.mkdir(parents=True,exist_ok=True)
