@@ -46,7 +46,8 @@ public class MainActivity extends Activity {
     private Spinner styleSpinner,durationSpinner,resolutionSpinner;
     private TextView status;
     private Button startButton,saveButton,checkButton,downloadButton,retryButton;
-    private Spinner voiceSpinner;\n    private CheckBox musicCheck,sfxCheck,subtitleCheck;
+    private Spinner voiceSpinner;
+    private CheckBox musicCheck,sfxCheck,subtitleCheck;
     private String token;
     private boolean busy=false,pendingStart=false;
 
@@ -137,8 +138,8 @@ public class MainActivity extends Activity {
         try{
             p.put("schema_version",1);p.put("title",titleInput.getText().toString().trim());
             p.put("prompt",promptInput.getText().toString().trim());p.put("character_bible",characterInput.getText().toString().trim());
-            JSONArray scenes=new JSONArray();for(String line:sceneInput.getText().toString().split("\\n"))if(!line.trim().isEmpty())scenes.put(line.trim());p.put("scenes",scenes);
-            JSONArray dialogue=new JSONArray();for(String line:dialogueInput.getText().toString().split("\\n"))if(!line.trim().isEmpty()){
+            JSONArray scenes=new JSONArray();for(String line:sceneInput.getText().toString().split("\n"))if(!line.trim().isEmpty())scenes.put(line.trim());p.put("scenes",scenes);
+            JSONArray dialogue=new JSONArray();for(String line:dialogueInput.getText().toString().split("\n"))if(!line.trim().isEmpty()){
                 String[] parts=line.split("\\|",2);JSONObject d=new JSONObject();d.put("english",parts[0].trim());d.put("myanmar",parts.length>1?parts[1].trim():"");dialogue.put(d);
             }p.put("dialogue",dialogue);
             p.put("voice",voiceSpinner.getSelectedItem().toString());p.put("background_music",musicCheck.isChecked());p.put("sfx",sfxCheck.isChecked());p.put("myanmar_subtitles",subtitleCheck.isChecked());
@@ -152,7 +153,7 @@ public class MainActivity extends Activity {
         String raw=prefs().getString("last_project",null);if(raw==null)return;
         try{JSONObject p=new JSONObject(raw);titleInput.setText(p.optString("title",""));promptInput.setText(p.optString("prompt",""));characterInput.setText(p.optString("character_bible",""));
             JSONArray a=p.optJSONArray("scenes");if(a!=null){StringBuilder b=new StringBuilder();for(int i=0;i<a.length();i++)b.append(a.getString(i)).append("\n");sceneInput.setText(b.toString());}
-            JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\\n");}dialogueInput.setText(b.toString());}
+            JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(b.toString());}
             musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("myanmar_subtitles",true));
         }catch(Exception ignored){}
     }
@@ -175,8 +176,8 @@ public class MainActivity extends Activity {
                 JSONObject story=new JSONObject(content);
                 main.post(()->{
                     titleInput.setText(story.optString("title","Untitled Story"));characterInput.setText(story.optString("character_bible",""));
-                    JSONArray sc=story.optJSONArray("scenes");StringBuilder sb=new StringBuilder();if(sc!=null)for(int i=0;i<sc.length();i++)sb.append(sc.optString(i)).append("\\n");sceneInput.setText(sb.toString());
-                    JSONArray ds=story.optJSONArray("dialogue");StringBuilder db=new StringBuilder();if(ds!=null)for(int i=0;i<ds.length();i++){JSONObject d=ds.optJSONObject(i);db.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\\n");}dialogueInput.setText(db.toString());
+                    JSONArray sc=story.optJSONArray("scenes");StringBuilder sb=new StringBuilder();if(sc!=null)for(int i=0;i<sc.length();i++)sb.append(sc.optString(i)).append("\n");sceneInput.setText(sb.toString());
+                    JSONArray ds=story.optJSONArray("dialogue");StringBuilder db=new StringBuilder();if(ds!=null)for(int i=0;i<ds.length();i++){JSONObject d=ds.optJSONObject(i);db.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(db.toString());
                     setStatus("AI story draft ready. Review and edit every scene before rendering.");
                 });
             }catch(Exception e){setStatus("AI assist error: "+e.getMessage());}
@@ -185,8 +186,8 @@ public class MainActivity extends Activity {
     }
     private void offlineStoryAssist(String prompt){
         String[] ideas=prompt.split("[.!?。！？]+");StringBuilder scenes=new StringBuilder();int count=0;
-        for(String idea:ideas){String v=idea.trim();if(v.isEmpty())continue;scenes.append("Scene ").append(++count).append(": ").append(v).append("\\n");if(count==6)break;}
-        if(count==0)scenes.append("Scene 1: Introduce the main character\\nScene 2: A surprising problem appears\\nScene 3: Action and comic twist\\nScene 4: Happy ending");
+        for(String idea:ideas){String v=idea.trim();if(v.isEmpty())continue;scenes.append("Scene ").append(++count).append(": ").append(v).append("\n");if(count==6)break;}
+        if(count==0)scenes.append("Scene 1: Introduce the main character\nScene 2: A surprising problem appears\nScene 3: Action and comic twist\nScene 4: Happy ending");
         sceneInput.setText(scenes.toString());setStatus("Offline storyboard outline created. Add character details and bilingual dialogue; connect an AI provider for full AI writing.");
     }
 
@@ -338,7 +339,7 @@ public class MainActivity extends Activity {
                     ApiResponse sr=api("GET",API+"/actions/runs/"+id,token,null);
                     if(sr.code!=200)throw new Exception("Retry status failed (HTTP "+sr.code+"): "+sr.body);
                     JSONObject run=new JSONObject(sr.body);String state=run.optString("status","unknown"),result=run.optString("conclusion","");
-                    setStatus("Retry render "+state+" / "+result+"\\nRun ID: "+id);
+                    setStatus("Retry render "+state+" / "+result+"\nRun ID: "+id);
                     if("completed".equals(state)){
                         if(!"success".equals(result))throw new Exception("Retry finished with result: "+result);
                         setStatus("Retry complete. Downloading MP4…");downloadArtifact(id);return;
