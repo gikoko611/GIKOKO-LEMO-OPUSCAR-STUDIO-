@@ -83,6 +83,7 @@ def main():
         draw("credit","POWERED BY I KO KO","h*0.20",int(height*.027),color="0xffe8b0",box="0x000000@0.22")
         draw("character",textwrap.fill(str(p.get("character_bible") or "A consistent royal hero."),58)[:650],
              "h*0.77",int(height*.026),font=myanmar,enable="between(t,0,8)",box="0x000000@0.55")
+        span=total/max(1,len(scenes))
         raw_durations=[max(1.0,float(x.get("duration",10))) for x in plan] if plan else [1.0]*len(scenes)
         duration_sum=sum(raw_durations) or 1.0
         cursor=0.0
