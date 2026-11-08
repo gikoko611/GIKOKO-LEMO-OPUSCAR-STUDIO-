@@ -91,6 +91,18 @@ jobs:
           echo "MainActivity.class: $(stat -c%s "$CLASSES/MainActivity.class") bytes"
           echo "ProviderManager.class: $(stat -c%s "$CLASSES/ProviderManager.class") bytes"
           echo "Compiled application classes verified after clean assemble."
+      - name: Diagnose Java-to-DEX packaging inputs
+        if: always()
+        run: |
+          set -euo pipefail
+          echo "=== Compiled Java classes ==="
+          find app/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes -type f -name '*.class' -printf '%p %s bytes\\n' 2>/dev/null | head -80 || true
+          echo "=== DEX intermediate files ==="
+          find app/build/intermediates -type f \\( -name '*.dex' -o -name '*.jar' \\) -printf '%p %s bytes\\n' 2>/dev/null | grep -E 'dex|javac|project' | head -120 || true
+          echo "=== APK entries ==="
+          unzip -l app/build/outputs/apk/debug/app-debug.apk 2>/dev/null | head -100 || true
+          echo "=== Gradle dex task inputs ==="
+          gradle --no-daemon :app:tasks --all | grep -E 'dexBuilderDebug|mergeProjectDexDebug|compileDebugJavaWithJavac' || true
       - name: Verify APK contains compiled application classes
         run: |
           set -euo pipefail
