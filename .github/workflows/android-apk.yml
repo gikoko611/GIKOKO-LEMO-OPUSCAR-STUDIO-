@@ -1,4 +1,4 @@
-name: Build G.I KO KO Studio APK
+name: Build G.I Ko Ko ViD Gen APK
 on:
   workflow_dispatch:
   push:
@@ -39,7 +39,7 @@ jobs:
           node --check scripts/animation_runtime.js
           cat > "$RUNNER_TEMP/sample-project.json" <<'JSON'
           {
-            "title": "G.I KO KO Render Smoke Test",
+            "title": "G.I Ko Ko ViD Gen Render Smoke Test",
             "character_bible": "A friendly golden royal guard.",
             "scenes": ["Palace courtyard", "A funny surprise"],
             "dialogue": [
@@ -72,7 +72,7 @@ jobs:
       - name: Upload end-to-end render smoke test
         uses: actions/upload-artifact@v4
         with:
-          name: GIKOKO-RENDER-SMOKE-TEST
+          name: GI-KO-KO-VID-GEN-RENDER-SMOKE-TEST
           path: ${{ runner.temp }}/gikoko-full-pipeline-smoke.mp4
           if-no-files-found: error
           retention-days: 3
@@ -92,7 +92,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: GIKOKO-LEMO-OPUSCAR-STUDIO-APK
+          name: GI-KO-KO-VID-GEN-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
