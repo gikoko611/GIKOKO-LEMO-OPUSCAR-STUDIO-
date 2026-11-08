@@ -8,6 +8,9 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.content.ContentValues;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.security.keystore.KeyGenParameterSpec;
@@ -21,6 +24,9 @@ import android.widget.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.KeyStore;
@@ -51,12 +57,14 @@ public class MainActivity extends Activity {
     private String token;
     private String animationCode="";
     private boolean busy=false,pendingStart=false;
+    private static final String DIAGNOSTIC_FILE="diagnostic.log";
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         getWindow().setStatusBarColor(Color.rgb(8,11,18));
         getWindow().setNavigationBarColor(Color.rgb(8,11,18));
         token=loadToken();
+        installCrashLogger();
         buildUi();
     }
 
@@ -116,6 +124,7 @@ public class MainActivity extends Activity {
         checkButton=button("CHECK RENDER STATUS");root.addView(checkButton);checkButton.setOnClickListener(v->checkLastRun());
         downloadButton=button("DOWNLOAD LATEST MP4");root.addView(downloadButton);downloadButton.setOnClickListener(v->downloadLastRun());
         status=label(token==null?"Status: Add your GitHub token to begin.":"Status: Ready — token encrypted on this device.",14);root.addView(status);
+        Button diagnostics=button("🛠 DIAGNOSTIC CENTER — VIEW / COPY / EXPORT LOG");root.addView(diagnostics);diagnostics.setOnClickListener(v->showDiagnosticCenter());
         root.addView(label("No GitHub Actions page is needed. The APK starts the workflow, checks status and downloads the MP4. Render time and GitHub usage limits apply. Artifacts expire after 7 days.",12));
         setContentView(scroll);
         restoreProject();
@@ -195,7 +204,70 @@ public class MainActivity extends Activity {
         sceneInput.setText(scenes.toString());setStatus("Offline storyboard outline created. Add character details and bilingual dialogue; connect an AI provider for full AI writing.");
     }
 
-    private void setStatus(String s){main.post(()->status.setText(s));}
+    private synchronized void appendDiagnostic(String message){
+        try{
+            String safe=message==null?"(empty)":message;
+            if(token!=null&&!token.isEmpty())safe=safe.replace(token,"[REDACTED_GITHUB_TOKEN]");
+            safe=safe.replaceAll("(?i)(Bearer\\s+)[A-Za-z0-9_\\-\\.]+","$1[REDACTED]");
+            safe=safe.replaceAll("(?i)(github_pat_|ghp_|sk-|AIza)[A-Za-z0-9_\\-]{12,}","[REDACTED_SECRET]");
+            File file=new File(getFilesDir(),DIAGNOSTIC_FILE);
+            if(file.exists()&&file.length()>512*1024)file.delete();
+            String stamp=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS",Locale.US).format(new Date());
+            try(FileOutputStream out=new FileOutputStream(file,true)){
+                out.write((stamp+"  "+safe+"\n").getBytes("UTF-8"));
+            }
+        }catch(Exception ignored){}
+    }
+    private void installCrashLogger(){
+        final Thread.UncaughtExceptionHandler previous=Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((thread,error)->{
+            StringWriter sw=new StringWriter();error.printStackTrace(new PrintWriter(sw));
+            appendDiagnostic("FATAL CRASH on "+thread.getName()+"\n"+sw.toString());
+            if(previous!=null)previous.uncaughtException(thread,error);
+        });
+    }
+    private String readDiagnosticLog(){
+        File file=new File(getFilesDir(),DIAGNOSTIC_FILE);
+        if(!file.exists())return "No diagnostic entries yet.";
+        try(BufferedReader reader=new BufferedReader(new InputStreamReader(new FileInputStream(file),"UTF-8"))){
+            StringBuilder out=new StringBuilder();String line;
+            while((line=reader.readLine())!=null)out.append(line).append("\n");
+            return out.toString();
+        }catch(Exception e){return "Could not read log: "+e.getMessage();}
+    }
+    private void showDiagnosticCenter(){
+        String log=readDiagnosticLog();
+        android.widget.TextView content=new android.widget.TextView(this);
+        content.setText(log);content.setTextColor(Color.WHITE);content.setTextSize(12);content.setTextIsSelectable(true);content.setPadding(18,12,18,12);
+        ScrollView panel=new ScrollView(this);panel.setBackgroundColor(Color.rgb(8,11,18));panel.addView(content);
+        android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
+            .setTitle("G.I KO KO — DIAGNOSTIC CENTER")
+            .setView(panel)
+            .setPositiveButton("COPY LOG",(d,w)->{
+                ClipboardManager clipboard=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                clipboard.setPrimaryClip(ClipData.newPlainText("G.I Ko Ko ViD Gen diagnostic log",readDiagnosticLog()));
+                Toast.makeText(this,"Diagnostic log copied.",Toast.LENGTH_SHORT).show();
+            })
+            .setNegativeButton("EXPORT / SHARE",(d,w)->{
+                Intent share=new Intent(Intent.ACTION_SEND);share.setType("text/plain");
+                share.putExtra(Intent.EXTRA_SUBJECT,"G.I Ko Ko ViD Gen Diagnostic Log");
+                share.putExtra(Intent.EXTRA_TEXT,readDiagnosticLog());
+                startActivity(Intent.createChooser(share,"Export diagnostic log"));
+            })
+            .setNeutralButton("CLEAR LOG",(d,w)->{
+                File file=new File(getFilesDir(),DIAGNOSTIC_FILE);
+                if(file.exists())file.delete();
+                appendDiagnostic("Diagnostic log cleared by user.");
+                Toast.makeText(this,"Diagnostic log cleared.",Toast.LENGTH_SHORT).show();
+            }).create();
+        dialog.show();
+        dialog.getWindow().setLayout((int)(getResources().getDisplayMetrics().widthPixels*0.92),
+            (int)(getResources().getDisplayMetrics().heightPixels*0.72));
+    }
+    private void setStatus(String s){
+        appendDiagnostic("STATUS: "+s);
+        main.post(()->status.setText(s));
+    }
     private void setBusy(boolean b){
         busy=b;main.post(()->{startButton.setEnabled(!b);checkButton.setEnabled(!b);downloadButton.setEnabled(!b);saveButton.setEnabled(!b);if(retryButton!=null)retryButton.setEnabled(!b);});
     }
