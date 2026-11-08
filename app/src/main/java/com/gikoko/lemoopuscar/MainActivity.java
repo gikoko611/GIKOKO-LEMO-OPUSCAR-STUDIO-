@@ -331,7 +331,16 @@ public class MainActivity extends Activity {
     }
 
     private void saveProject(){
-        JSONObject p=buildProject();String raw=p.toString();prefs().edit().putString("last_project",raw).apply();setStatus("Project saved on this phone ("+raw.length()+" characters).");
+        JSONObject p=buildProject();String raw=p.toString();
+        try{
+            JSONArray library=new JSONArray(prefs().getString("project_library","[]"));
+            String title=p.optString("title","Untitled Project");boolean replaced=false;
+            for(int i=0;i<library.length();i++){JSONObject item=library.optJSONObject(i);if(item!=null&&title.equals(item.optString("title"))){library.put(i,new JSONObject().put("title",title).put("project",p));replaced=true;break;}}
+            if(!replaced)library.put(new JSONObject().put("title",title).put("project",p));
+            while(library.length()>20)library.remove(0);
+            prefs().edit().putString("project_library",library.toString()).putString("last_project",raw).putString("watermark_logo_base64",watermarkLogoBase64).apply();
+        }catch(Exception e){recordException("Save project library",e);prefs().edit().putString("last_project",raw).apply();}
+        setStatus("Project saved to this phone and Project Library ("+raw.length()+" characters).");
     }
     private void setSpinnerValue(Spinner spinner,String value){for(int i=0;i<spinner.getCount();i++)if(spinner.getItemAtPosition(i).toString().equals(value)){spinner.setSelection(i);return;}}
     private void restoreProject(){
