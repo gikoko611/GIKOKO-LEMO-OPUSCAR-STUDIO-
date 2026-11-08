@@ -39,7 +39,7 @@ on:
         required: true
         type: string
       project_json:
-        description: "Story, scenes, character bible, dialogue and audio settings JSON"
+        description: "Story, scenes, dialogue, audio settings and optional compressed character reference image JSON"
         required: true
         type: string
 
