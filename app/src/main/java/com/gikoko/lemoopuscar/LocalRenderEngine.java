@@ -23,7 +23,7 @@ public final class LocalRenderEngine {
 
     public static void render(JSONObject project, File output, int seconds, String resolution,
                               String ratio, int fps, Progress progress) throws Exception {
-        if (seconds < 1 || seconds > 30) throw new IllegalArgumentException("Local render supports 1–30 seconds per clip on this device.");
+        if (seconds < 1 || seconds > 15) throw new IllegalArgumentException("Local render supports up to 15 seconds per clip on this low-memory device.");
         int base = "720p".equals(resolution) ? 720 : 480;
         int width, height;
         if ("9:16".equals(ratio)) { width=base; height=base*16/9; }
@@ -71,7 +71,7 @@ public final class LocalRenderEngine {
             String title=project.optString("title","G.I KO KO ViD GEN");
             String watermark=project.optString("watermark","POWERED BY I KO KO");
             long timeout=10000;
-            int frame=0;
+            int frame=0; int[] pixelBuffer=new int[width*height]; byte[] yuvBuffer=new byte[width*height*3/2];
             while (!outputDone) {
                 if (!inputDone) {
                     int inputIndex=codec.dequeueInputBuffer(timeout);
@@ -81,7 +81,7 @@ public final class LocalRenderEngine {
                         if (frame<frames) {
                             input.clear();
                             drawFrame(canvas,paint,width,height,frame,frames,fps,title,watermark,scenes,dialogue);
-                            writeYuv420(bitmap,input,width,height,color==MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
+                            writeYuv420(bitmap,input,width,height,color==MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar,pixelBuffer,yuvBuffer);
                             codec.queueInputBuffer(inputIndex,0,input.position(),(long)frame*1000000L/fps,0);
                             frame++;
                             if (progress!=null && (frame%Math.max(1,fps)==0 || frame==frames))
@@ -145,9 +145,9 @@ public final class LocalRenderEngine {
         for(String word:words){String next=line.isEmpty()?word:line+" "+word;if(p.measureText(next)>max&&!line.isEmpty()){c.drawText(line,x,y+row++*lineH,p);line=word;if(row>=3)break;}else line=next;}
         if(!line.isEmpty()&&row<3)c.drawText(line,x,y+row*lineH,p);
     }
-    private static void writeYuv420(Bitmap bitmap,ByteBuffer out,int width,int height,boolean semiPlanar){
-        int[] pixels=new int[width*height];bitmap.getPixels(pixels,0,width,0,0,width,height);
-        int frameSize=width*height;byte[] yuv=new byte[frameSize*3/2];int yIndex=0,uvIndex=frameSize;
+    private static void writeYuv420(Bitmap bitmap,ByteBuffer out,int width,int height,boolean semiPlanar,int[] pixels,byte[] yuv){
+        bitmap.getPixels(pixels,0,width,0,0,width,height);
+        int frameSize=width*height;int yIndex=0,uvIndex=frameSize;
         int uIndex=frameSize,vIndex=frameSize+frameSize/4;
         for(int j=0;j<height;j++)for(int i=0;i<width;i++){
             int rgb=pixels[j*width+i],r=(rgb>>16)&255,g=(rgb>>8)&255,b=rgb&255;
