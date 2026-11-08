@@ -81,17 +81,16 @@ jobs:
           curl -L --fail --retry 3 https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip"
           unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
-      - name: Compile Android Java sources explicitly
+      - name: Clean build and assemble APK with fresh DEX inputs
         run: |
           set -euo pipefail
-          gradle --no-daemon --stacktrace clean :app:compileDebugJavaWithJavac
+          gradle --no-daemon --no-build-cache --rerun-tasks --stacktrace clean :app:assembleDebug
           CLASSES="app/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/gikoko/lemoopuscar"
           test -s "$CLASSES/MainActivity.class"
           test -s "$CLASSES/ProviderManager.class"
           echo "MainActivity.class: $(stat -c%s "$CLASSES/MainActivity.class") bytes"
           echo "ProviderManager.class: $(stat -c%s "$CLASSES/ProviderManager.class") bytes"
-      - name: Assemble APK
-        run: gradle --no-daemon --stacktrace :app:assembleDebug
+          echo "Compiled application classes verified after clean assemble."
       - name: Verify APK contains compiled application classes
         run: |
           set -euo pipefail
