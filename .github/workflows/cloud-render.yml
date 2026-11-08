@@ -41,6 +41,12 @@ on:
         description: "Story, scenes, dialogue, audio settings and optional compressed character reference image JSON"
         required: true
         type: string
+      gemini_model:
+        description: Gemini free-tier model for optional character-reference analysis
+        required: true
+        type: choice
+        default: gemini-3.8-flash
+        options: [gemini-3.8-flash, gemini-3.6-flash, gemini-2.5-flash, gemini-2.5-flash-lite]
 
 permissions:
   contents: write
@@ -95,7 +101,7 @@ jobs:
       - name: Analyze uploaded character reference with Gemini (optional)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_VISION_MODEL: gemini-3.8-flash
+          GEMINI_VISION_MODEL: ${{ inputs.gemini_model }}
         run: |
           set -euo pipefail
           python scripts/character_reference.py --project project.json --out project.json
