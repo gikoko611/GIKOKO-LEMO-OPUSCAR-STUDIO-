@@ -89,15 +89,9 @@ jobs:
           print("Project valid:", p.get("title","Untitled"), "| scenes:", len(p["scenes"]))
           code=p.get("animation_code","")
           if code and (not isinstance(code,str) or len(code)>24000): raise SystemExit("animation_code must be a string <= 24000 characters")
+          ref=p.get("character_reference_base64","")
+          if ref and len(ref)>30000: raise SystemExit("Character reference payload exceeds the 22 KB source-image limit.")
           PY
-
-      - name: Analyze uploaded character reference with Gemini (optional)
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_VISION_MODEL: gemini-3.8-flash
-        run: |
-          set -euo pipefail
-          python scripts/character_reference.py --project project.json --out project.json
 
       - name: Analyze uploaded character reference with Gemini (optional)
         env:
