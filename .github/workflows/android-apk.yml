@@ -52,6 +52,7 @@ jobs:
               {"english": "Let's begin!", "myanmar": "စတင်ကြစို့။"}
             ],
             "duration_minutes": "1",
+            "bilingual_subtitles": true,
             "style": "cartoon2d",
             "animation_code": "function(api){ api.scene({title:'Sandbox Test', description:'AI-authored scene plan', duration:3, background:'#183344', motion:'bounce'}); }"
           }
@@ -65,6 +66,14 @@ jobs:
             --project "$RUNNER_TEMP/sample-project.json" \
             --out "$RUNNER_TEMP/gikoko-audio-smoke.wav" \
             --duration 3 --work "$RUNNER_TEMP/gikoko-audio-work"
+          python - <<'PY'
+          from pathlib import Path
+          srt=Path("$RUNNER_TEMP/gikoko-audio-smoke.srt")
+          text=srt.read_text(encoding="utf-8")
+          assert "I am ready!" in text, "English subtitle missing"
+          assert "ကျွန်တော် အသင့်ဖြစ်ပါပြီ။" in text, "Myanmar subtitle missing"
+          print("Bilingual subtitle smoke test passed: English + Myanmar")
+          PY
           ffmpeg -y -hide_banner -loglevel error \
             -i "$RUNNER_TEMP/gikoko-render-smoke.mp4" \
             -i "$RUNNER_TEMP/gikoko-audio-smoke.wav" \
