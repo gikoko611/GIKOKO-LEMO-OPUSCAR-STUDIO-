@@ -228,7 +228,7 @@ public class MainActivity extends Activity {
     }
     private EditText edit(String value,String hint,boolean secret){
         EditText e=new EditText(this);e.setText(value);e.setHint(hint);e.setTextColor(0xffeffaff);e.setHintTextColor(0xff7693a2);
-        e.setTextSize(14);e.setSingleLine(!hint.toLowerCase(Locale.US).contains("prompt")&&!hint.toLowerCase(Locale.US).contains("bible")&&!hint.toLowerCase(Locale.US).contains("outline")&&!hint.toLowerCase(Locale.US).contains("dialogue"));
+        e.setTextSize(14);e.setSingleLine(!hint.toLowerCase(Locale.US).contains("prompt")&&!hint.toLowerCase(Locale.US).contains("director")&&!hint.toLowerCase(Locale.US).contains("bible")&&!hint.toLowerCase(Locale.US).contains("outline")&&!hint.toLowerCase(Locale.US).contains("dialogue"));
         e.setInputType(secret?(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD):(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES));
         e.setPadding(dp(13),dp(11),dp(13),dp(11));e.setBackground(shape(themeBg,themeBorder,14));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(5);lp.bottomMargin=dp(8);e.setLayoutParams(lp);return e;
