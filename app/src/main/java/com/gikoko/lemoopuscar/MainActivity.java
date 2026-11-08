@@ -71,6 +71,7 @@ public class MainActivity extends Activity {
     private TextView characterReferenceStatus;
     private ImageView characterReferencePreview;
     private boolean busy=false,pendingStart=false;
+    private boolean facebookContentMode=true;
     private int themeBg=0xff09091b,themeCard=0xff17152b,themeBorder=0xff7158b8,themeAccent=0xff8be9ff,themeText=0xfff1efff,themeMuted=0xffaaa6c8,themeButtonA=0xff6b3de6,themeButtonB=0xffd14aa8;
     private static final String DIAGNOSTIC_FILE="diagnostic.log";
 
@@ -166,6 +167,7 @@ public class MainActivity extends Activity {
         addToolRow(tools,R.drawable.ic_tool_audio,"AUDIO LAB","Voice, music and sound effects",()->openAudioLab(),R.drawable.ic_tool_cloud,"CLOUD QUEUE","Check render status and logs",()->{checkLastRun();openRenderCenter();});
         addToolRow(tools,R.drawable.ic_tool_projects,"PROJECT LIBRARY","Open saved projects and drafts",()->openProjectLibrary(),R.drawable.ic_tool_brand,"BRAND KIT","Logo and watermark controls",()->openBrandKit());
         addToolRow(tools,R.drawable.ic_tool_ratio,"FORMAT PRESETS","Portrait, landscape and square",()->openFormatPresets(),R.drawable.ic_tool_diagnostics,"DIAGNOSTICS","Copy or export technical logs",()->showDiagnosticCenter());
+        addToolRow(tools,R.drawable.ic_tool_templates,"FACEBOOK CONTENT","Mixed Reels & 1–3 min videos",()->openFacebookContentSystem(),R.drawable.ic_tool_audio,"BILINGUAL VOICE","English + Myanmar narration",()->openAudioLab());
         addToolRow(tools,R.drawable.ic_tool_reference,"REFERENCE LAB","Upload your own character image",()->openCharacterReferenceLab(),R.drawable.ic_tool_motion,"MOTION PRESETS","Float, bounce, slide, pulse or still",()->openCharacterReferenceLab());
 
         LinearLayout project=card(root);heading(project,"02  /  PROJECT DETAILS","Keep the title, character identity and scene continuity in one place.");
@@ -179,11 +181,12 @@ public class MainActivity extends Activity {
 
         LinearLayout config=card(root);heading(config,"03  /  PRODUCTION SETTINGS","Choose output format, quality, voice and finishing options.");
         config.addView(label("VISUAL STYLE",11));styleSpinner=spinner(new String[]{"hybrid","cartoon2d","cartoon3d","cinematic"});config.addView(styleSpinner);
-        config.addView(label("VIDEO LENGTH  •  MINUTES",11));durationSpinner=spinner(new String[]{"1","5","10","30"});config.addView(durationSpinner);
+        config.addView(label("VIDEO LENGTH  •  MINUTES",11));durationSpinner=spinner(new String[]{"1","2","3","5","10","30"});config.addView(durationSpinner);
         config.addView(label("OUTPUT QUALITY",11));resolutionSpinner=spinner(new String[]{"480p","720p"});config.addView(resolutionSpinner);
         config.addView(label("ASPECT RATIO",11));aspectRatioSpinner=spinner(new String[]{"16:9","9:16","1:1","4:5"});config.addView(aspectRatioSpinner);
         config.addView(label("FRAME RATE",11));frameRateSpinner=spinner(new String[]{"24","30","60"});config.addView(frameRateSpinner);
         config.addView(label("VOICE-OVER",11));voiceSpinner=spinner(new String[]{"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"});config.addView(voiceSpinner);
+        setSpinnerValue(durationSpinner,"2");setSpinnerValue(aspectRatioSpinner,"9:16");setSpinnerValue(voiceSpinner,"Bilingual voice-over");
         musicCheck=new CheckBox(this);musicCheck.setText("Background music");musicCheck.setTextColor(themeText);musicCheck.setChecked(true);config.addView(musicCheck);
         sfxCheck=new CheckBox(this);sfxCheck.setText("Sound effects");sfxCheck.setTextColor(themeText);sfxCheck.setChecked(true);config.addView(sfxCheck);
         subtitleCheck=new CheckBox(this);subtitleCheck.setText("Bilingual subtitles  •  English + Myanmar");subtitleCheck.setTextColor(themeText);subtitleCheck.setChecked(true);config.addView(subtitleCheck);
@@ -269,6 +272,7 @@ public class MainActivity extends Activity {
         JSONObject p=new JSONObject();
         try{
             p.put("schema_version",1);p.put("title",titleInput.getText().toString().trim());
+            p.put("platform","facebook");p.put("content_mode",facebookContentMode?"mixed":"standard");p.put("facebook_content_mode",facebookContentMode);p.put("free_first",true);
             p.put("prompt",promptInput.getText().toString().trim());p.put("character_bible",characterInput.getText().toString().trim());
             p.put("character_reference_base64",characterReferenceBase64);
             p.put("character_reference_mime","image/webp");
@@ -379,6 +383,21 @@ public class MainActivity extends Activity {
         new android.app.AlertDialog.Builder(this).setTitle("FORMAT PRESETS").setItems(formats,(d,w)->{setSpinnerValue(aspectRatioSpinner,ratios[w]);setStatus("Output format set to "+ratios[w]+". Save draft or render when ready.");}).setNegativeButton("CLOSE",null).show();
     }
 
+    private void openFacebookContentSystem(){
+        LinearLayout panel=column();panel.setPadding(dp(14),dp(8),dp(14),dp(8));
+        TextView summary=label("FACEBOOK CREATOR MODE\n\nMixed original content: comedy, Myanmar history & culture, storytelling, moral lessons, education, action/adventure and motivation. The AI Director chooses the best mix for each idea.\n\nFree-first production: Gemini Free Tier for story/visual analysis when available; offline FFmpeg animation and Edge TTS for video/audio. No Omni/Veo video API and no paid TTS by default.",12);
+        summary.setTextColor(themeText);panel.addView(summary);
+        CheckBox enabled=new CheckBox(this);enabled.setText("Enable Facebook mixed-content brief");enabled.setTextColor(themeText);enabled.setChecked(facebookContentMode);panel.addView(enabled);
+        new android.app.AlertDialog.Builder(this).setTitle("FACEBOOK CONTENT SYSTEM").setView(panel)
+            .setPositiveButton("APPLY",(d,w)->{
+                facebookContentMode=enabled.isChecked();
+                setSpinnerValue(durationSpinner,"2");setSpinnerValue(aspectRatioSpinner,"9:16");
+                setSpinnerValue(voiceSpinner,"Bilingual voice-over");
+                subtitleCheck.setChecked(true);musicCheck.setChecked(true);sfxCheck.setChecked(true);
+                saveProject();setStatus("Facebook Creator Mode applied: mixed content, 2-minute default, 9:16 Reels, bilingual voice and subtitles. Change duration to 1 or 3 minutes when needed.");
+            }).setNegativeButton("CANCEL",null).show();
+    }
+
     private void openProjectLibrary(){
         try{
             JSONArray library=new JSONArray(prefs().getString("project_library","[]"));
@@ -467,7 +486,7 @@ public class MainActivity extends Activity {
             watermarkLogoBase64=p.optString("watermark_logo_base64",prefs().getString("watermark_logo_base64",""));
             JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(b.toString());}
             musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("bilingual_subtitles",p.optBoolean("myanmar_subtitles",true)));
-            setSpinnerValue(styleSpinner,p.optString("style","cartoon2d"));setSpinnerValue(durationSpinner,p.optString("duration_minutes","1"));setSpinnerValue(resolutionSpinner,p.optString("resolution","480p"));setSpinnerValue(voiceSpinner,p.optString("voice","No voice-over"));
+            facebookContentMode=p.optBoolean("facebook_content_mode",p.optString("content_mode","mixed").equals("mixed"));setSpinnerValue(styleSpinner,p.optString("style","hybrid"));setSpinnerValue(durationSpinner,p.optString("duration_minutes","2"));setSpinnerValue(resolutionSpinner,p.optString("resolution","480p"));setSpinnerValue(voiceSpinner,p.optString("voice","No voice-over"));
             if(aspectRatioSpinner!=null)setSpinnerValue(aspectRatioSpinner,p.optString("aspect_ratio","16:9"));
             if(frameRateSpinner!=null)setSpinnerValue(frameRateSpinner,p.optString("fps","24"));
             if(watermarkInput!=null)watermarkInput.setText(p.optString("watermark","POWERED BY I KO KO"));
@@ -476,7 +495,8 @@ public class MainActivity extends Activity {
 
     private void assistStory(){
         if(busy)return;
-        final String prompt=promptInput.getText().toString().trim();
+        final String userPrompt=promptInput.getText().toString().trim();
+        final String prompt=facebookContentMode ? userPrompt+"\n\nFACEBOOK MIXED-CONTENT PRODUCTION BRIEF: Create an original Facebook-ready episode combining suitable elements from comedy, Myanmar history and culture, storytelling, moral lessons, education, action/adventure and motivation. Select only the categories that fit the idea; do not force every category into one episode. Hook viewers in the first 3 seconds, use a clear beginning, escalating middle and satisfying ending, short scene beats, strong visual actions, and natural bilingual English + Myanmar dialogue. Keep character appearance consistent. Target 1–3 minutes, with enough scenes and dialogue to fill the selected duration. Avoid copyrighted characters, copied scripts, unlicensed music and misleading factual claims." : userPrompt;
         if(prompt.isEmpty()){setStatus("Enter a film idea first.");return;}
         if(token==null){
             new ProviderManager(this).generateStory(prompt,(story,err,provider)->{
