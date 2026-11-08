@@ -72,7 +72,7 @@ public class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(22,24,22,28);root.setBackgroundColor(Color.rgb(8,11,18));scroll.addView(root);
         TextView title=label("G.I KO KO",32);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setGravity(Gravity.CENTER);root.addView(title);
-        TextView sub=label("LEMO OPUSCAR PROFESSIONAL STUDIO",14);sub.setGravity(Gravity.CENTER);root.addView(sub);
+        TextView sub=label("G.I Ko Ko ViD Gen",14);sub.setGravity(Gravity.CENTER);root.addView(sub);
         TextView credit=label("POWERED BY I KO KO",12);credit.setGravity(Gravity.CENTER);root.addView(credit);
 
         root.addView(label("GITHUB TOKEN — FIRST-TIME SETUP",16));
