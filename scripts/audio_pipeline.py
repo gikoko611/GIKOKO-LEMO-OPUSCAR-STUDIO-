@@ -103,7 +103,7 @@ def main():
             start=i*slot+0.15; end=min(duration,(i+1)*slot-0.1)
             en=(d.get("english") or "").strip(); my=(d.get("myanmar") or "").strip()
             if subtitles:
-                caption="\\n".join(part for part in (en,my) if part)
+                caption="\n".join(part for part in (en,my) if part)
                 if caption: entries.append((start,end,caption))
             if "English" in voice_mode or "Bilingual" in voice_mode:
                 if en: speech.append((start,en,"Puck"))
