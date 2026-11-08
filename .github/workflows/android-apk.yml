@@ -181,3 +181,29 @@ jobs:
 
           echo "Single stable release updated:"
           gh release view "$TAG" --json name,tagName,url,assets
+
+      - name: Publish verifiable build status report
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          cat > BUILD-STATUS.md <<EOF
+          # G.I KO KO ViD Gen — Latest APK Build
+          - Status: ${BUILD_STATUS}
+          - Workflow: Build G.I Ko Ko ViD Gen APK
+          - Run: #${GITHUB_RUN_NUMBER}
+          - Run ID: ${GITHUB_RUN_ID}
+          - Commit: ${GITHUB_SHA}
+          - APK artifact: GI-KO-KO-VID-GEN-APK
+          - Run details: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          - Release: https://github.com/${GITHUB_REPOSITORY}/releases/tag/latest
+          EOF
+          CONTENT=$(base64 -w0 BUILD-STATUS.md)
+          SHA=$(gh api "repos/${GITHUB_REPOSITORY}/contents/BUILD-STATUS.md" --jq .sha 2>/dev/null || true)
+          if [ -n "$SHA" ]; then
+            gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/BUILD-STATUS.md" -f message="Record APK build verification #${GITHUB_RUN_NUMBER}" -f content="$CONTENT" -f branch="${GITHUB_REF_NAME}" -f sha="$SHA"
+          else
+            gh api -X PUT "repos/${GITHUB_REPOSITORY}/contents/BUILD-STATUS.md" -f message="Record APK build verification #${GITHUB_RUN_NUMBER}" -f content="$CONTENT" -f branch="${GITHUB_REF_NAME}"
+          fi
