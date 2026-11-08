@@ -118,11 +118,23 @@ jobs:
           cp assets/icons/icon-512.png app/src/main/res/drawable-nodpi/ic_launcher.png
           file app/src/main/res/drawable-nodpi/ic_launcher.png
           echo "Launcher icon restored from assets/icons/icon-512.png"
-      - name: Set up Gradle 8.9 with retry-safe distribution provisioning
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.9"
-          cache-disabled: false
+      - name: Install Gradle 8.9 with retry-safe direct distribution download
+        run: |
+          set -euo pipefail
+          DIST="gradle-8.9-bin.zip"
+          URL="https://downloads.gradle.org/distributions/gradle-8.9-bin.zip"
+          for attempt in 1 2 3 4 5 6 7 8; do
+            echo "Gradle 8.9 download attempt $attempt/8"
+            if curl --fail --location --retry 3 --retry-all-errors --retry-delay 4 --connect-timeout 30 --max-time 240 "$URL" -o "$RUNNER_TEMP/$DIST"; then
+              break
+            fi
+            rm -f "$RUNNER_TEMP/$DIST"
+            sleep $((attempt * 3))
+          done
+          test -s "$RUNNER_TEMP/$DIST"
+          unzip -q "$RUNNER_TEMP/$DIST" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/gradle-8.9/bin/gradle" --version
       - name: Clean build and assemble APK with fresh DEX inputs
         run: |
           set -euo pipefail
