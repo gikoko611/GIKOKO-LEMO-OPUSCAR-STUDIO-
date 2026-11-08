@@ -69,6 +69,7 @@ public class MainActivity extends Activity {
     private String characterReferenceBase64="";
     private String characterMotion="float";
     private TextView characterReferenceStatus;
+    private ImageView characterReferencePreview;
     private boolean busy=false,pendingStart=false;
     private int themeBg=0xff09091b,themeCard=0xff17152b,themeBorder=0xff7158b8,themeAccent=0xff8be9ff,themeText=0xfff1efff,themeMuted=0xffaaa6c8,themeButtonA=0xff6b3de6,themeButtonB=0xffd14aa8;
     private static final String DIAGNOSTIC_FILE="diagnostic.log";
@@ -325,8 +326,12 @@ public class MainActivity extends Activity {
     }
     private void openCharacterReferenceLab(){
         LinearLayout panel=column();panel.setPadding(dp(14),dp(8),dp(14),dp(8));
-        TextView note=label("Upload a character image. Gemini will describe its visible design, then the free FFmpeg animation engine will move the uploaded image in your video. No Omni or Veo API is used.",11);
+        TextView note=label("Upload a character image. Transparent-background PNG/WebP works best. Gemini describes its visible design; the free FFmpeg engine animates the image layer. No Omni or Veo API is used.",11);
         note.setTextColor(themeMuted);panel.addView(note);
+        characterReferencePreview=new ImageView(this);characterReferencePreview.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        characterReferencePreview.setBackground(shape(0xff071923,0xff205064,14));
+        if(!characterReferenceBase64.isEmpty()){try{byte[] previewBytes=Base64.decode(characterReferenceBase64,Base64.DEFAULT);characterReferencePreview.setImageBitmap(BitmapFactory.decodeByteArray(previewBytes,0,previewBytes.length));}catch(Exception ignored){}}
+        LinearLayout.LayoutParams previewLp=new LinearLayout.LayoutParams(-1,dp(140));previewLp.bottomMargin=dp(8);panel.addView(characterReferencePreview,previewLp);
         characterReferenceStatus=label(characterReferenceBase64.isEmpty()?"No reference image selected.":"Reference image ready for cloud animation.",11);
         characterReferenceStatus.setTextColor(0xff62edc7);panel.addView(characterReferenceStatus);
         Button upload=button("＋  UPLOAD CHARACTER IMAGE");panel.addView(upload);
@@ -427,6 +432,7 @@ public class MainActivity extends Activity {
                 characterReferenceBase64=Base64.encodeToString(compressed,Base64.NO_WRAP);
                 prefs().edit().putString("character_reference_base64",characterReferenceBase64).apply();
                 if(characterReferenceStatus!=null)characterReferenceStatus.setText("Reference image ready ("+(compressed.length/1024)+" KB compressed).");
+                if(characterReferencePreview!=null)characterReferencePreview.setImageBitmap(BitmapFactory.decodeByteArray(compressed,0,compressed.length));
                 setStatus("Character reference imported. Gemini visual analysis + free cloud animation are enabled for the next render.");
                 saveProject();
             }catch(Exception e){recordException("Import character reference",e);setStatus("Character image import failed: "+e.getMessage());}
