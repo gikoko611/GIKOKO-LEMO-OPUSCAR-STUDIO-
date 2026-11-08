@@ -68,7 +68,8 @@ jobs:
             --duration 3 --work "$RUNNER_TEMP/gikoko-audio-work"
           python - <<'PY'
           from pathlib import Path
-          srt=Path("$RUNNER_TEMP/gikoko-audio-smoke.srt")
+          import os
+          srt=Path(os.environ["RUNNER_TEMP"]) / "gikoko-audio-smoke.srt"
           text=srt.read_text(encoding="utf-8")
           assert "I am ready!" in text, "English subtitle missing"
           assert "ကျွန်တော် အသင့်ဖြစ်ပါပြီ။" in text, "Myanmar subtitle missing"
