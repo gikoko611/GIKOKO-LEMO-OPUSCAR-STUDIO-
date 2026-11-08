@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <application
         android:allowBackup="false"
-        android:label="G.I KO KO LEMO OPUSCAR STUDIO"
+        android:label="G.I Ko Ko ViD Gen"
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:usesCleartextTraffic="false"
         android:requestLegacyExternalStorage="true">
