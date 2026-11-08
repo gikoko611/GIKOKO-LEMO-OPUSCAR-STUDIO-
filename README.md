@@ -4,7 +4,7 @@
 
 ## Studio modules
 
-### 0.4.0 Character Reference + Free Animation Upgrade
+### Facebook Creator Mode — Free-first mixed content\n- Added a Facebook Creator Mode preset for mixed comedy, Myanmar history/culture, storytelling, moral, educational, action/adventure and motivational content.\n- Defaults to 2-minute vertical 9:16 Reels, bilingual English + Myanmar narration/subtitles, background music and sound effects; select 1 or 3 minutes as needed.\n- Story prompts include a first-3-second hook, short scene beats, character continuity and a satisfying ending.\n- Free-first policy: Gemini Free Tier text/vision only when available; Edge TTS is the default voice engine; FFmpeg/Python performs video rendering. Paid Omni/Veo video generation and paid Gemini TTS are not called by default. Free Tier quotas and GitHub Actions usage limits still apply.\n\n### 0.4.0 Character Reference + Free Animation Upgrade
 - English-first studio interface with twelve custom vector feature icons and a neon cyber visual system.
 - Ten built-in starter templates: Myanmar palace comedy, folk tale, action adventure, rural mystery, kids fable, travel documentary, product showcase, motivational short, music video and movie recap.
 - Twelve illustrated tools: Starter Templates, Character Lab, Dialogue Desk, Subtitle Preview, Audio Lab, Cloud Queue, Project Library, Brand Kit, Format Presets, Diagnostics, Character Reference Lab and Motion Presets.
@@ -20,7 +20,7 @@
 - Upload a personal character image (compressed and stored with the saved project), choose Float / Bounce / Slide / Pulse / Still, and render that same image with smooth FFmpeg motion.
 - Gemini Flash optionally inspects the uploaded image and adds a visual-identity description to the character bible using the existing `GEMINI_API_KEY` secret.
 - Save the project locally on the phone.
-- Select Hybrid, Cartoon 2D, Cartoon 3D or Cinematic; 1, 5, 10 or 30 minutes; 480p or 720p.
+- Select Hybrid, Cartoon 2D, Cartoon 3D or Cinematic; 1, 2, 3, 5, 10 or 30 minutes; 480p or 720p.
 - Start cloud rendering, check workflow step progress, retry failed jobs and download the MP4 from inside the APK.
 - GitHub Fine-grained token is encrypted with Android Keystore AES-GCM. It is not embedded in the APK.
 
