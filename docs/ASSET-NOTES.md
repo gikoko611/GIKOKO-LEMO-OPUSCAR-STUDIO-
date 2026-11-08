@@ -14,3 +14,11 @@ Google Material Symbols are documented under Apache License 2.0. This project us
 
 ## Language
 The application interface is English-first. Burmese text is used where users author dialogue and in the bilingual English + Myanmar subtitle stream.
+
+
+## Character Reference Lab (0.4.0)
+- `ic_tool_reference.xml` and `ic_tool_motion.xml` are original Android Vector Drawable icons authored for this project.
+- Character reference uploads are downsampled and WebP-compressed on-device before being included in the project JSON.
+- Gemini Flash is used only for visual description and Character Bible enrichment. It does not generate video frames.
+- The cloud renderer uses Pillow to decode the supplied image and FFmpeg overlay transforms for Float, Bounce, Slide, Pulse and Still motion.
+- No Omni or Veo API key is required. The output is 2D image-layer animation, not full-body rigging or AI-generated scene synthesis.
