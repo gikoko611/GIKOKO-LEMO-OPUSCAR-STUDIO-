@@ -16,7 +16,7 @@ import android.content.pm.PackageManager;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
-import android.graphics.Color;
+import android.graphics.Color;\nimport android.view.View;\nimport android.widget.FrameLayout;
 import android.graphics.Typeface;
 import android.text.InputType;
 import android.view.Gravity;
@@ -68,75 +68,180 @@ public class MainActivity extends Activity {
         buildUi();
     }
 
+    private int dp(float v){return (int)(v*getResources().getDisplayMetrics().density+0.5f);}
+    private android.graphics.drawable.GradientDrawable shape(int fill,int stroke,int radius){
+        android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable();
+        d.setColor(fill);d.setCornerRadius(dp(radius));if(stroke!=0)d.setStroke(dp(1),stroke);return d;
+    }
     private TextView label(String s,int size){
-        TextView v=new TextView(this);v.setText(s);v.setTextColor(Color.rgb(245,226,177));v.setTextSize(size);v.setPadding(0,14,0,7);return v;
+        TextView v=new TextView(this);v.setText(s);v.setTextColor(0xffd9f7ff);v.setTextSize(size);
+        v.setPadding(0,dp(8),0,dp(5));return v;
     }
     private Spinner spinner(String[] values){
-        Spinner s=new Spinner(this);ArrayAdapter<String>a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,values);
-        a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);return s;
+        Spinner s=new Spinner(this);ArrayAdapter<String>a=new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,values){
+            @Override public View getView(int p,View c,android.view.ViewGroup parent){TextView t=(TextView)super.getView(p,c,parent);t.setTextColor(0xffe7fbff);t.setTextSize(14);t.setPadding(dp(10),dp(9),dp(10),dp(9));return t;}
+            @Override public View getDropDownView(int p,View c,android.view.ViewGroup parent){TextView t=(TextView)super.getDropDownView(p,c,parent);t.setTextColor(0xffe7fbff);t.setBackgroundColor(0xff101d2a);t.setPadding(dp(14),dp(12),dp(14),dp(12));return t;}
+        };
+        a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);
+        s.setBackground(shape(0xff101d2a,0xff245a70,12));return s;
     }
-    private Button button(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);return b;}
+    private Button button(String s){
+        Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextColor(0xffefffff);
+        b.setTextSize(13);b.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));
+        b.setBackground(new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+            new int[]{0xff087d79,0xff0755a8}));
+        b.setPadding(dp(12),dp(8),dp(12),dp(8));b.setElevation(dp(4));return b;
+    }
+    private LinearLayout column(){
+        LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);return l;
+    }
+    private LinearLayout card(LinearLayout parent){
+        LinearLayout c=column();c.setPadding(dp(16),dp(13),dp(16),dp(15));
+        c.setBackground(shape(0xee101d2b,0xff1d6570,18));c.setElevation(dp(5));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(13);parent.addView(c,lp);return c;
+    }
+    private void heading(LinearLayout box,String text,String hint){
+        TextView t=label(text,16);t.setTextColor(0xff62f5c5);t.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));box.addView(t);
+        if(hint!=null&&!hint.isEmpty()){TextView h=label(hint,11);h.setTextColor(0xff8daab8);h.setPadding(0,0,0,dp(7));box.addView(h);}
+    }
     private void buildUi(){
-        ScrollView scroll=new ScrollView(this);
-        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(22,24,22,28);root.setBackgroundColor(Color.rgb(8,11,18));scroll.addView(root);
-        TextView title=label("G.I KO KO",32);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setGravity(Gravity.CENTER);root.addView(title);
-        TextView sub=label("G.I Ko Ko ViD Gen",14);sub.setGravity(Gravity.CENTER);root.addView(sub);
-        TextView credit=label("POWERED BY I KO KO",12);credit.setGravity(Gravity.CENTER);root.addView(credit);
+        getWindow().setStatusBarColor(0xff07111b);getWindow().setNavigationBarColor(0xff07111b);
+        FrameLayout shell=new FrameLayout(this);
+        shell.setBackground(new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            new int[]{0xff050b14,0xff0a1724,0xff07101b}));
+        CyberGridView grid=new CyberGridView(this);shell.addView(grid,new FrameLayout.LayoutParams(-1,-1));
+        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);
+        LinearLayout root=column();root.setPadding(dp(18),dp(14),dp(18),dp(30));scroll.addView(root);
+        shell.addView(scroll);setContentView(shell);
 
-        root.addView(label("GITHUB TOKEN — FIRST-TIME SETUP",16));
-        TextView help=label("Create a Fine-grained personal access token for this repository only. Grant Actions: Read and write. Paste it below, then tap SAVE TOKEN. The token is encrypted with Android Keystore on this phone.",12);root.addView(help);
-        tokenInput=new EditText(this);tokenInput.setSingleLine(true);tokenInput.setTextColor(Color.WHITE);tokenInput.setHintTextColor(Color.GRAY);tokenInput.setHint("github_pat_…");tokenInput.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);root.addView(tokenInput);
-        saveButton=button(token==null?"SAVE TOKEN":"UPDATE TOKEN");root.addView(saveButton);saveButton.setOnClickListener(v->saveToken());
-        Button clear=button("REMOVE SAVED TOKEN");root.addView(clear);clear.setOnClickListener(v->clearToken());
+        FrameLayout hero=new FrameLayout(this);hero.setBackground(new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            new int[]{0xff123c4a,0xff10244b,0xff071321}));
+        hero.setElevation(dp(8));hero.setPadding(dp(18),dp(20),dp(18),dp(18));
+        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(190));hp.bottomMargin=dp(16);root.addView(hero,hp);
+        CyberGridView heroGrid=new CyberGridView(this);hero.addView(heroGrid,new FrameLayout.LayoutParams(-1,-1));
+        LinearLayout brand=column();brand.setGravity(Gravity.CENTER);FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams(-1,-1);hero.addView(brand,bp);
+        TextView logo=new TextView(this);logo.setText("G.I");logo.setTextColor(0xffc7fff0);logo.setTextSize(52);
+        logo.setTypeface(Typeface.create("sans-serif-black",Typeface.BOLD));logo.setGravity(Gravity.CENTER);
+        logo.setShadowLayer(dp(18),0,0,0xff00e6ad);brand.addView(logo);
+        android.animation.ValueAnimator pulse=android.animation.ValueAnimator.ofFloat(0.96f,1.045f);
+        pulse.setDuration(1900);pulse.setRepeatCount(android.animation.ValueAnimator.INFINITE);pulse.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+        pulse.addUpdateListener(a->{float v=(Float)a.getAnimatedValue();logo.setScaleX(v);logo.setScaleY(v);});pulse.start();
+        TextView appName=label("KO KO  •  ViD GEN",15);appName.setGravity(Gravity.CENTER);appName.setTextColor(0xffe9fbff);
+        appName.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));brand.addView(appName);
+        TextView credit=label("3D CREATIVE STUDIO   /   POWERED BY I KO KO",9);credit.setGravity(Gravity.CENTER);
+        credit.setTextColor(0xff62e8d0);brand.addView(credit);
 
-        root.addView(label("AI ASSISTANT — OPENAI-COMPATIBLE PROVIDER",16));
-        aiBaseInput=edit("https://api.openai.com/v1","API Base URL",false);root.addView(aiBaseInput);
-        aiModelInput=edit("gpt-4o-mini","Model ID",false);root.addView(aiModelInput);
-        aiKeyInput=edit("","AI API Key (optional; encrypted on device)",true);root.addView(aiKeyInput);
-        Button saveAi=button("SAVE AI PROVIDER");root.addView(saveAi);saveAi.setOnClickListener(v->saveAiProvider());
-        Button providers=button("🌐 ALL PROVIDER CONFIGURATION");root.addView(providers);providers.setOnClickListener(v->new ProviderManager(this).open());
-        Button assist=button("✨ AI STORY ASSIST");root.addView(assist);assist.setOnClickListener(v->assistStory());
+        LinearLayout quick=card(root);heading(quick,"STUDIO CONTROL","Your creative workspace");
+        TextView intro=label("Create animated stories, generate scenes and render your video from one clean workspace.",12);
+        intro.setTextColor(0xffa9c4d1);quick.addView(intro);
+        LinearLayout quickRow=new LinearLayout(this);quickRow.setOrientation(LinearLayout.HORIZONTAL);quick.addView(quickRow);
+        Button settings=button("⚙  SETTINGS");quickRow.addView(settings,new LinearLayout.LayoutParams(0,dp(48),1));
+        Button assist=button("✦  AI STORY ASSIST");LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(0,dp(48),1);ap.leftMargin=dp(8);quickRow.addView(assist,ap);
+        settings.setOnClickListener(v->openSettings());assist.setOnClickListener(v->assistStory());
 
-        root.addView(label("STORY & TIMELINE ENGINE",18));
-        titleInput=edit("The Golden Kingdom","Film Title",false);root.addView(titleInput);
-        promptInput=edit("Write a funny adventure in an ancient Myanmar royal palace. Include an unexpected action-comedy twist.","Describe your film idea / Prompt",false);promptInput.setMinLines(3);root.addView(promptInput);
-        characterInput=edit("Main character: a clever but clumsy royal guard. Keep costume, face, colors and personality consistent in every scene.","Character Bible — fixed appearance and personality",false);characterInput.setMinLines(3);root.addView(characterInput);
-        sceneInput=edit("Palace courtyard — introduce the guard\nThrone room — a suspicious royal order\nPalace kitchen — comic chase\nRoyal hall — funny reveal","Scene Outline — one scene per line",false);sceneInput.setMinLines(4);root.addView(sceneInput);
-        dialogueInput=edit("Guard: I have everything under control. | အားလုံးကို ကျွန်တော် ထိန်းချုပ်ထားပါတယ်။\nKing: Then why is the palace on fire? | ဒါဆို နန်းတော်က ဘာလို့ မီးလောင်နေတာလဲ။","Dialogue — English | Myanmar per line",false);dialogueInput.setMinLines(4);root.addView(dialogueInput);
-        Button saveProject=button("SAVE PROJECT");root.addView(saveProject);saveProject.setOnClickListener(v->saveProject());
+        LinearLayout project=card(root);heading(project,"01  •  PROJECT BUILDER","Start with a title and a clear creative idea");
+        titleInput=edit("The Golden Kingdom","Film title",false);project.addView(titleInput);
+        promptInput=edit("Write a funny adventure in an ancient Myanmar royal palace. Include an unexpected action-comedy twist.","Describe your film idea / prompt",false);
+        promptInput.setMinLines(3);project.addView(promptInput);
+        characterInput=edit("Main character: a clever but clumsy royal guard. Keep costume, face, colors and personality consistent in every scene.","Character Bible — consistent look and personality",false);
+        characterInput.setMinLines(3);project.addView(characterInput);
+        sceneInput=edit("Palace courtyard — introduce the guard\nThrone room — a suspicious royal order\nPalace kitchen — comic chase\nRoyal hall — funny reveal","Scene outline — one scene per line",false);
+        sceneInput.setMinLines(4);project.addView(sceneInput);
+        dialogueInput=edit("Guard: I have everything under control. | အားလုံးကို ကျွန်တော် ထိန်းချုပ်ထားပါတယ်။\nKing: Then why is the palace on fire? | ဒါဆို နန်းတော်က ဘာလို့ မီးလောင်နေတာလဲ။","Dialogue — English | Myanmar per line",false);
+        dialogueInput.setMinLines(4);project.addView(dialogueInput);
+        Button saveProject=button("▣  SAVE PROJECT");project.addView(saveProject);saveProject.setOnClickListener(v->saveProject());
 
-        root.addView(label("AUDIO & SUBTITLE ENGINE",18));
-        voiceSpinner=spinner(new String[]{"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"});root.addView(voiceSpinner);
-        musicCheck=new CheckBox(this);musicCheck.setText("Background Music");musicCheck.setTextColor(Color.WHITE);musicCheck.setChecked(true);root.addView(musicCheck);
-        sfxCheck=new CheckBox(this);sfxCheck.setText("Sound Effects");sfxCheck.setTextColor(Color.WHITE);sfxCheck.setChecked(true);root.addView(sfxCheck);
-        subtitleCheck=new CheckBox(this);subtitleCheck.setText("Myanmar Subtitles (SRT track)");subtitleCheck.setTextColor(Color.WHITE);subtitleCheck.setChecked(true);root.addView(subtitleCheck);
+        LinearLayout render=card(root);heading(render,"02  •  RENDER STUDIO","Cloud rendering • MP4 output");
+        startButton=button("▶   START VIDEO RENDER");render.addView(startButton);
+        startButton.setOnClickListener(v->{if(token==null){setStatus("Open Settings and add your GitHub token first.");return;}
+            if(ensureStoragePermission())startRender();else{pendingStart=true;requestStoragePermission();}});
+        LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);rp.topMargin=dp(8);render.addView(actions,rp);
+        retryButton=button("↻ RETRY");actions.addView(retryButton,new LinearLayout.LayoutParams(0,dp(46),1));retryButton.setOnClickListener(v->retryFailedRender());
+        checkButton=button("◉ STATUS");LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(46),1);cp.leftMargin=dp(7);actions.addView(checkButton,cp);checkButton.setOnClickListener(v->checkLastRun());
+        downloadButton=button("↓ MP4");LinearLayout.LayoutParams dp2=new LinearLayout.LayoutParams(0,dp(46),1);dp2.leftMargin=dp(7);actions.addView(downloadButton,dp2);downloadButton.setOnClickListener(v->downloadLastRun());
 
-        root.addView(label("RENDER SETTINGS",18));
-        root.addView(label("Film Style",14));styleSpinner=spinner(new String[]{"hybrid","cartoon2d","cartoon3d","cinematic"});root.addView(styleSpinner);
-        root.addView(label("Duration (minutes)",14));durationSpinner=spinner(new String[]{"1","5","10","30"});root.addView(durationSpinner);
-        root.addView(label("Resolution",14));resolutionSpinner=spinner(new String[]{"480p","720p"});root.addView(resolutionSpinner);
+        LinearLayout statusCard=card(root);heading(statusCard,"LIVE STATUS","Workflow and download updates");
+        status=label(token==null?"●  READY  —  Add your GitHub token in Settings.":"●  READY  —  Secure token loaded.",12);
+        status.setTextColor(0xff70f5c8);status.setMinLines(2);statusCard.addView(status);
+        TextView foot=label("Designed for Android 10 • GitHub Actions build & render • 480p / 720p",10);
+        foot.setTextColor(0xff7895a5);foot.setGravity(Gravity.CENTER);root.addView(foot);
 
-        startButton=button("▶ START RENDER");root.addView(startButton);startButton.setOnClickListener(v->{
-            if(token==null){setStatus("Please save your Fine-grained GitHub token first.");return;}
-            if(ensureStoragePermission()){startRender();}else{pendingStart=true;requestStoragePermission();}
-        });
-        retryButton=button("RETRY FAILED RENDER");root.addView(retryButton);retryButton.setOnClickListener(v->retryFailedRender());
-        checkButton=button("CHECK RENDER STATUS");root.addView(checkButton);checkButton.setOnClickListener(v->checkLastRun());
-        downloadButton=button("DOWNLOAD LATEST MP4");root.addView(downloadButton);downloadButton.setOnClickListener(v->downloadLastRun());
-        status=label(token==null?"Status: Add your GitHub token to begin.":"Status: Ready — token encrypted on this device.",14);root.addView(status);
-        Button diagnostics=button("🛠 DIAGNOSTIC CENTER — VIEW / COPY / EXPORT LOG");root.addView(diagnostics);diagnostics.setOnClickListener(v->showDiagnosticCenter());
-        root.addView(label("No GitHub Actions page is needed. The APK starts the workflow, checks status and downloads the MP4. Render time and GitHub usage limits apply. Artifacts expire after 7 days.",12));
-        setContentView(scroll);
+        buildSettingsPanel();
         restoreProject();
+    }
+    private void buildSettingsPanel(){
+        LinearLayout panel=column();panel.setPadding(dp(18),dp(8),dp(18),dp(24));
+        LinearLayout account=card(panel);heading(account,"SECURITY & GITHUB","Token is encrypted locally with Android Keystore");
+        TextView help=label("Use a fine-grained token for this repository. Grant Actions read/write and Contents read/write for workflow dispatch and release access.",11);help.setTextColor(0xff9eb7c4);account.addView(help);
+        tokenInput=edit("","GitHub fine-grained token",true);account.addView(tokenInput);
+        saveButton=button(token==null?"SAVE TOKEN":"UPDATE TOKEN");account.addView(saveButton);saveButton.setOnClickListener(v->saveToken());
+        Button clear=button("REMOVE SAVED TOKEN");account.addView(clear);clear.setOnClickListener(v->clearToken());
+
+        LinearLayout ai=card(panel);heading(ai,"AI PROVIDER","OpenAI-compatible endpoint and model");
+        aiBaseInput=edit("https://api.openai.com/v1","API base URL",false);ai.addView(aiBaseInput);
+        aiModelInput=edit("gpt-4o-mini","Model ID",false);ai.addView(aiModelInput);
+        aiKeyInput=edit("","AI API key — encrypted on device",true);ai.addView(aiKeyInput);
+        Button saveAi=button("SAVE AI PROVIDER");ai.addView(saveAi);saveAi.setOnClickListener(v->saveAiProvider());
+        Button providers=button("◎  PROVIDER MANAGER");ai.addView(providers);providers.setOnClickListener(v->new ProviderManager(this).open());
+
+        LinearLayout output=card(panel);heading(output,"VIDEO & AUDIO","Keep advanced controls here, away from the main workspace");
+        TextView styleLabel=label("VISUAL STYLE",11);output.addView(styleLabel);
+        styleSpinner=spinner(new String[]{"hybrid","cartoon2d","cartoon3d","cinematic"});output.addView(styleSpinner);
+        TextView durationLabel=label("DURATION (MINUTES)",11);output.addView(durationLabel);
+        durationSpinner=spinner(new String[]{"1","5","10","30"});output.addView(durationSpinner);
+        TextView resolutionLabel=label("OUTPUT RESOLUTION",11);output.addView(resolutionLabel);
+        resolutionSpinner=spinner(new String[]{"480p","720p"});output.addView(resolutionSpinner);
+        voiceSpinner=spinner(new String[]{"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"});output.addView(label("VOICE-OVER",11));output.addView(voiceSpinner);
+        musicCheck=new CheckBox(this);musicCheck.setText("Background music");musicCheck.setTextColor(0xffd9f7ff);musicCheck.setChecked(true);output.addView(musicCheck);
+        sfxCheck=new CheckBox(this);sfxCheck.setText("Sound effects");sfxCheck.setTextColor(0xffd9f7ff);sfxCheck.setChecked(true);output.addView(sfxCheck);
+        subtitleCheck=new CheckBox(this);subtitleCheck.setText("Myanmar subtitle track (SRT)");subtitleCheck.setTextColor(0xffd9f7ff);subtitleCheck.setChecked(true);output.addView(subtitleCheck);
+
+        LinearLayout tools=card(panel);heading(tools,"MAINTENANCE","Logs and troubleshooting");
+        Button diagnostics=button("⌁  DIAGNOSTIC CENTER  •  VIEW / COPY / EXPORT");tools.addView(diagnostics);
+        diagnostics.setOnClickListener(v->showDiagnosticCenter());
+        Button done=button("DONE");panel.addView(done);done.setOnClickListener(v->{if(settingsDialog!=null)settingsDialog.dismiss();});
+        settingsPanel=panel;
         aiBaseInput.setText(prefs().getString("ai_base","https://api.openai.com/v1"));
         aiModelInput.setText(prefs().getString("ai_model","gpt-4o-mini"));
     }
-
+    private LinearLayout settingsPanel;
+    private android.app.AlertDialog settingsDialog;
+    private void openSettings(){
+        if(settingsDialog==null){
+            ScrollView sc=new ScrollView(this);sc.setFillViewport(true);sc.addView(settingsPanel);
+            settingsDialog=new android.app.AlertDialog.Builder(this).setTitle("G.I KO KO  /  SETTINGS").setView(sc).setNegativeButton("CLOSE",null).create();
+            settingsDialog.setOnShowListener(d->{settingsDialog.getWindow().setBackgroundDrawable(shape(0xff081522,0xff1a6672,18));
+                settingsDialog.getWindow().setLayout((int)(getResources().getDisplayMetrics().widthPixels*0.94),
+                    (int)(getResources().getDisplayMetrics().heightPixels*0.88));});
+        }
+        settingsDialog.show();
+        settingsDialog.getWindow().setBackgroundDrawable(shape(0xff081522,0xff1a6672,18));
+        settingsDialog.getWindow().setLayout((int)(getResources().getDisplayMetrics().widthPixels*0.94),
+            (int)(getResources().getDisplayMetrics().heightPixels*0.88));
+    }
     private EditText edit(String value,String hint,boolean secret){
-        EditText e=new EditText(this);e.setText(value);e.setHint(hint);e.setTextColor(Color.WHITE);e.setHintTextColor(Color.GRAY);
-        e.setSingleLine(!hint.contains("Prompt")&&!hint.contains("Bible")&&!hint.contains("Outline")&&!hint.contains("Dialogue"));
+        EditText e=new EditText(this);e.setText(value);e.setHint(hint);e.setTextColor(0xffeffaff);e.setHintTextColor(0xff7693a2);
+        e.setTextSize(14);e.setSingleLine(!hint.toLowerCase(Locale.US).contains("prompt")&&!hint.toLowerCase(Locale.US).contains("bible")&&!hint.toLowerCase(Locale.US).contains("outline")&&!hint.toLowerCase(Locale.US).contains("dialogue"));
         e.setInputType(secret?(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD):(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES));
-        e.setPadding(12,10,12,10);return e;
+        e.setPadding(dp(13),dp(11),dp(13),dp(11));e.setBackground(shape(0xff0a1722,0xff24586a,12));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(5);lp.bottomMargin=dp(8);e.setLayoutParams(lp);return e;
+    }
+    private static class CyberGridView extends View{
+        private final android.graphics.Paint p=new android.graphics.Paint(3);
+        private long start=System.currentTimeMillis();
+        CyberGridView(Activity a){super(a);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
+        @Override protected void onDraw(android.graphics.Canvas c){
+            super.onDraw(c);float w=getWidth(),h=getHeight();p.setStyle(android.graphics.Paint.Style.STROKE);p.setStrokeWidth(1f);p.setColor(0x2434e8d0);
+            float step=dpStatic(getContext(),28);for(float x=0;x<w;x+=step)c.drawLine(x,0,x,h,p);for(float y=0;y<h;y+=step)c.drawLine(0,y,w,y,p);
+            float phase=((System.currentTimeMillis()-start)%4200)/4200f;p.setStyle(android.graphics.Paint.Style.FILL);
+            p.setColor(0x5535f4cb);for(int i=0;i<12;i++){float x=(i*83f+phase*w*0.35f)%Math.max(1,w);float y=(i*47f+phase*h*0.2f)%Math.max(1,h);c.drawCircle(x,y,1.6f,p);}
+            p.setColor(0x1c20aaff);c.drawRect(0,phase*h, w,phase*h+dpStatic(getContext(),2),p);
+            postInvalidateDelayed(90);
+        }
+        private static float dpStatic(android.content.Context c,float v){return v*c.getResources().getDisplayMetrics().density;}
     }
     private void saveAiProvider(){
         String base=aiBaseInput.getText().toString().trim(),model=aiModelInput.getText().toString().trim(),key=aiKeyInput.getText().toString().trim();
@@ -273,7 +378,7 @@ public class MainActivity extends Activity {
         main.post(()->status.setText(s));
     }
     private void setBusy(boolean b){
-        busy=b;main.post(()->{startButton.setEnabled(!b);checkButton.setEnabled(!b);downloadButton.setEnabled(!b);saveButton.setEnabled(!b);if(retryButton!=null)retryButton.setEnabled(!b);});
+        busy=b;main.post(()->{if(startButton!=null)startButton.setEnabled(!b);if(checkButton!=null)checkButton.setEnabled(!b);if(downloadButton!=null)downloadButton.setEnabled(!b);if(saveButton!=null)saveButton.setEnabled(!b);if(retryButton!=null)retryButton.setEnabled(!b);});
     }
     private boolean ensureStoragePermission(){
         if(Build.VERSION.SDK_INT>=23 && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)!=PackageManager.PERMISSION_GRANTED)return false;
