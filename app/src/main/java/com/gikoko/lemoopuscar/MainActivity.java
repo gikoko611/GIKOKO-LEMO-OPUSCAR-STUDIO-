@@ -162,6 +162,17 @@ public class MainActivity extends Activity {
         sceneInput.setMinLines(4);project.addView(sceneInput);
         dialogueInput=edit("Guard: I have everything under control. | အားလုံးကို ကျွန်တော် ထိန်းချုပ်ထားပါတယ်။\nKing: Then why is the palace on fire? | ဒါဆို နန်းတော်က ဘာလို့ မီးလောင်နေတာလဲ။","Dialogue — English | Myanmar per line",false);
         dialogueInput.setMinLines(4);project.addView(dialogueInput);
+        LinearLayout config=card(root);heading(config,"VIDEO CONFIGURATION","Set duration, quality, framing and audio before generating");
+        config.addView(label("VISUAL STYLE",11));styleSpinner=spinner(new String[]{"hybrid","cartoon2d","cartoon3d","cinematic"});config.addView(styleSpinner);
+        config.addView(label("CLOUD FILM LENGTH (MINUTES)",11));durationSpinner=spinner(new String[]{"1","5","10","30"});config.addView(durationSpinner);
+        config.addView(label("OUTPUT RESOLUTION",11));resolutionSpinner=spinner(new String[]{"480p","720p"});config.addView(resolutionSpinner);
+        config.addView(label("VIDEO VIEW SIZE / ASPECT RATIO",11));aspectRatioSpinner=spinner(new String[]{"16:9","9:16","1:1","4:5"});config.addView(aspectRatioSpinner);
+        config.addView(label("FRAME RATE",11));frameRateSpinner=spinner(new String[]{"24","30","60"});config.addView(frameRateSpinner);
+        config.addView(label("VOICE-OVER",11));voiceSpinner=spinner(new String[]{"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"});config.addView(voiceSpinner);
+        musicCheck=new CheckBox(this);musicCheck.setText("Background music");musicCheck.setTextColor(themeText);musicCheck.setChecked(true);config.addView(musicCheck);
+        sfxCheck=new CheckBox(this);sfxCheck.setText("Sound effects");sfxCheck.setTextColor(themeText);sfxCheck.setChecked(true);config.addView(sfxCheck);
+        subtitleCheck=new CheckBox(this);subtitleCheck.setText("Myanmar subtitle track");subtitleCheck.setTextColor(themeText);subtitleCheck.setChecked(true);config.addView(subtitleCheck);
+        watermarkInput=edit("POWERED BY I KO KO","Watermark text",false);config.addView(label("WATERMARK / BRANDING",11));config.addView(watermarkInput);
         Button saveProject=button("▣  SAVE PROJECT");project.addView(saveProject);saveProject.setOnClickListener(v->saveProject());
 
         LinearLayout render=card(root);heading(render,"02  •  RENDER STUDIO","Cloud rendering • MP4 output");
@@ -206,19 +217,8 @@ public class MainActivity extends Activity {
         setSpinnerValue(renderModeSpinner,prefs().getString("render_mode","Cloud Render"));
         renderModeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onNothingSelected(android.widget.AdapterView<?> p){} public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){prefs().edit().putString("render_mode",renderModeSpinner.getSelectedItem().toString()).apply();}});
         localDurationSpinner=spinner(new String[]{"5","10","15","30"});output.addView(label("LOCAL CLIP DURATION (SECONDS) — MAX 30s",11));output.addView(localDurationSpinner);
-        TextView styleLabel=label("VISUAL STYLE",11);output.addView(styleLabel);
-        styleSpinner=spinner(new String[]{"hybrid","cartoon2d","cartoon3d","cinematic"});output.addView(styleSpinner);
-        TextView durationLabel=label("DURATION (MINUTES)",11);output.addView(durationLabel);
-        durationSpinner=spinner(new String[]{"1","5","10","30"});output.addView(durationSpinner);
-        TextView resolutionLabel=label("OUTPUT RESOLUTION",11);output.addView(resolutionLabel);
-        resolutionSpinner=spinner(new String[]{"480p","720p"});output.addView(resolutionSpinner);
-        aspectRatioSpinner=spinner(new String[]{"16:9","9:16","1:1","4:5"});output.addView(label("VIDEO VIEW / ASPECT RATIO",11));output.addView(aspectRatioSpinner);
-        frameRateSpinner=spinner(new String[]{"24","30","60"});output.addView(label("FRAME RATE",11));output.addView(frameRateSpinner);
-        watermarkInput=edit("POWERED BY I KO KO","Watermark text",false);output.addView(label("WATERMARK / BRANDING",11));output.addView(watermarkInput);
-        voiceSpinner=spinner(new String[]{"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"});output.addView(label("VOICE-OVER",11));output.addView(voiceSpinner);
-        musicCheck=new CheckBox(this);musicCheck.setText("Background music");musicCheck.setTextColor(0xffd9f7ff);musicCheck.setChecked(true);output.addView(musicCheck);
-        sfxCheck=new CheckBox(this);sfxCheck.setText("Sound effects");sfxCheck.setTextColor(0xffd9f7ff);sfxCheck.setChecked(true);output.addView(sfxCheck);
-        subtitleCheck=new CheckBox(this);subtitleCheck.setText("Myanmar subtitle track (SRT)");subtitleCheck.setTextColor(0xffd9f7ff);subtitleCheck.setChecked(true);output.addView(subtitleCheck);
+        localDurationSpinner=spinner(new String[]{"5","10","15","30"});output.addView(label("LOCAL CLIP DURATION (SECONDS) — MAX 30s",11));output.addView(localDurationSpinner);
+        TextView localNote=label("Local mode exports a silent preview MP4. Use Cloud mode for full-length audio, voice and subtitle mastering.",10);localNote.setTextColor(themeMuted);output.addView(localNote);
 
         LinearLayout tools=card(panel);heading(tools,"MAINTENANCE","Logs and troubleshooting");
         Button diagnostics=button("⌁  DIAGNOSTIC CENTER  •  VIEW / COPY / EXPORT");tools.addView(diagnostics);
