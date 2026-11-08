@@ -40,7 +40,7 @@ jobs:
       - name: Validate Python render pipeline
         run: |
           set -euo pipefail
-          python -m py_compile scripts/render_video.py scripts/audio_pipeline.py
+          python -m py_compile scripts/render_video.py scripts/audio_pipeline.py scripts/character_reference.py
           node --check scripts/animation_runtime.js
           cat > "$RUNNER_TEMP/sample-project.json" <<'JSON'
           {
@@ -57,6 +57,25 @@ jobs:
             "animation_code": "function(api){ api.scene({title:'Sandbox Test', description:'AI-authored scene plan', duration:3, background:'#183344', motion:'bounce'}); }"
           }
           JSON
+          python - <<'PY'
+          import base64, io, json, os
+          from pathlib import Path
+          from PIL import Image, ImageDraw
+          project_path = Path(os.environ["RUNNER_TEMP"]) / "sample-project.json"
+          project = json.loads(project_path.read_text(encoding="utf-8"))
+          image = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
+          draw = ImageDraw.Draw(image)
+          draw.ellipse((20, 8, 76, 64), fill=(232, 190, 112, 255))
+          draw.rounded_rectangle((26, 55, 70, 92), radius=10, fill=(35, 190, 150, 255))
+          buffer = io.BytesIO()
+          image.save(buffer, format="PNG")
+          project["character_reference_base64"] = base64.b64encode(buffer.getvalue()).decode("ascii")
+          project["character_reference_mime"] = "image/png"
+          project["character_motion"] = "bounce"
+          project_path.write_text(json.dumps(project), encoding="utf-8")
+          print("Character reference image smoke fixture added.")
+          PY
+          python scripts/character_reference.py --project "$RUNNER_TEMP/sample-project.json" --out "$RUNNER_TEMP/sample-project.json"
           node scripts/animation_runtime.js "$RUNNER_TEMP/sample-project.json" "$RUNNER_TEMP/normalized-project.json"
           python scripts/render_video.py \
             --project "$RUNNER_TEMP/normalized-project.json" \
