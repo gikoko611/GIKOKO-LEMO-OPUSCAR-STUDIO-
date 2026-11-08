@@ -332,10 +332,14 @@ public class MainActivity extends Activity {
         new android.app.AlertDialog.Builder(this).setTitle("SUBTITLE PREVIEW  /  EN + MY").setView(scroll).setPositiveButton("DONE",null).show();
     }
     private void openAudioLab(){
-        String[] voices={"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"};
-        new android.app.AlertDialog.Builder(this).setTitle("AUDIO LAB").setSingleChoiceItems(voices,Math.max(0,java.util.Arrays.asList(voices).indexOf(voiceSpinner.getSelectedItem().toString())),(d,w)->voiceSpinner.setSelection(w))
-            .setMultiChoiceItems(new String[]{"Background music","Sound effects"},new boolean[]{musicCheck.isChecked(),sfxCheck.isChecked()},(d,w,checked)->{if(w==0)musicCheck.setChecked(checked);else sfxCheck.setChecked(checked);})
-            .setPositiveButton("APPLY",(d,w)->saveProject()).setNegativeButton("CLOSE",null).show();
+        LinearLayout panel=column();panel.setPadding(dp(14),dp(8),dp(14),dp(8));
+        TextView voiceLabel=label("VOICE-OVER PRESET",11);voiceLabel.setTextColor(themeAccent);panel.addView(voiceLabel);
+        Spinner voices=spinner(new String[]{"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"});panel.addView(voices);setSpinnerValue(voices,voiceSpinner.getSelectedItem().toString());
+        CheckBox music=new CheckBox(this);music.setText("Background music");music.setTextColor(themeText);music.setChecked(musicCheck.isChecked());panel.addView(music);
+        CheckBox sfx=new CheckBox(this);sfx.setText("Sound effects");sfx.setTextColor(themeText);sfx.setChecked(sfxCheck.isChecked());panel.addView(sfx);
+        new android.app.AlertDialog.Builder(this).setTitle("AUDIO LAB").setMessage("Choose narration and finishing layers for the cloud mix.").setView(panel)
+            .setPositiveButton("APPLY",(d,w)->{setSpinnerValue(voiceSpinner,voices.getSelectedItem().toString());musicCheck.setChecked(music.isChecked());sfxCheck.setChecked(sfx.isChecked());saveProject();})
+            .setNegativeButton("CANCEL",null).show();
     }
     private void openBrandKit(){
         EditText watermark=edit(watermarkInput.getText().toString(),"Watermark text",false);
