@@ -1,0 +1,113 @@
+name: G.I KO KO AI Render Error Repair
+
+on:
+  workflow_run:
+    workflows: ["G.I Ko Ko ViD Gen Cloud Render"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ai-render-repair-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  ai-repair:
+    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.event == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 1
+
+      - name: Download failed render logs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPOSITORY/actions/runs/$RUN_ID/logs" -o /tmp/render-logs.zip
+          mkdir -p /tmp/render-logs
+          unzip -q /tmp/render-logs.zip -d /tmp/render-logs
+          python - <<'PY'
+          import pathlib,re
+          selected=[]
+          for p in pathlib.Path("/tmp/render-logs").rglob("*.txt"):
+              rows=p.read_text(errors="replace").splitlines()
+              for i,line in enumerate(rows):
+                  if re.search(r"(error|exception|traceback|failed|fatal|ModuleNotFoundError|ImportError|No such file|exit code)",line,re.I):
+                      selected.extend(rows[max(0,i-2):i+4])
+          text="\n".join(selected[-500:])
+          text=re.sub(r"(gh[pousr]_[A-Za-z0-9_]{20,}|AIza[0-9A-Za-z_-]{20,})","[REDACTED_SECRET]",text)
+          pathlib.Path("/tmp/failure.txt").write_text(text[-40000:],encoding="utf-8")
+          print("Failure context extracted:",min(len(text),40000),"characters")
+          PY
+
+      - name: Generate and validate a constrained AI patch
+        id: patch
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GEMINI_API_KEY:-}" ]; then
+            echo "GEMINI_API_KEY missing; AI repair skipped."
+            echo "applied=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python - <<'PY'
+          import json,os,pathlib,re,urllib.request
+          log=pathlib.Path("/tmp/failure.txt").read_text(encoding="utf-8")
+          prompt="""Act as a cautious Python/FFmpeg CI repair engineer. Use the failure log to find the smallest evidence-based code fix.
+          Return ONLY a unified git diff, or exactly NO_SAFE_PATCH if uncertain.
+          You may modify only existing scripts/*.py files. Never modify workflows, permissions, credentials, secrets, or security checks. Never add arbitrary downloads or hardcoded keys.
+          The patch must apply with git apply and preserve Python syntax.
+          FAILURE LOG:
+          """+log
+          body={"contents":[{"role":"user","parts":[{"text":prompt}]}],"generationConfig":{"temperature":0.1,"maxOutputTokens":5000}}
+          req=urllib.request.Request("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",data=json.dumps(body).encode(),headers={"Content-Type":"application/json","x-goog-api-key":os.environ["GEMINI_API_KEY"]},method="POST")
+          with urllib.request.urlopen(req,timeout=90) as r: data=json.loads(r.read())
+          answer=data["candidates"][0]["content"]["parts"][0]["text"].strip()
+          if answer.startswith("```"):
+              answer=answer.split("\n",1)[1]
+              if answer.endswith("```"): answer=answer[:-3].strip()
+          if answer=="NO_SAFE_PATCH" or not answer.startswith("diff --git "):
+              pathlib.Path("/tmp/repair.patch").write_text("")
+              raise SystemExit(0)
+          paths=re.findall(r"^diff --git a/(.*?) b/(.*?)$",answer,re.M)
+          if not paths or any(a!=b or not a.startswith("scripts/") or not a.endswith(".py") for a,b in paths):
+              raise SystemExit("Rejected patch: only existing scripts/*.py files are allowed.")
+          pathlib.Path("/tmp/repair.patch").write_text(answer+"\n",encoding="utf-8")
+          PY
+          if [ ! -s /tmp/repair.patch ]; then
+            echo "applied=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git apply --check /tmp/repair.patch
+          git apply /tmp/repair.patch
+          python -m compileall -q scripts
+          python scripts/audio_pipeline.py --help >/dev/null
+          python scripts/render_video.py --help >/dev/null
+          git diff --check
+          if git diff --quiet; then echo "applied=false" >> "$GITHUB_OUTPUT"; else echo "applied=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Open AI repair pull request for human review
+        if: steps.patch.outputs.applied == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ github.token }}
+          branch: ai/auto-render-repair-${{ github.event.workflow_run.id }}
+          delete-branch: true
+          commit-message: "AI repair: fix failed render pipeline"
+          title: "AI repair for failed ViD Gen render #${{ github.event.workflow_run.run_number }}"
+          body: |
+            Gemini analyzed the failed Cloud Render run and proposed a minimal patch.
+            Source run: ${{ github.event.workflow_run.html_url }}
+            Changes are restricted to scripts/*.py and passed Python compile, CLI, and git diff checks.
+            Please review before merging. Unreviewed AI code is never pushed directly to the default branch.
