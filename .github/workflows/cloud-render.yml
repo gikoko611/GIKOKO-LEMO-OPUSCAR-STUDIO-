@@ -22,6 +22,18 @@ on:
         type: choice
         default: 480p
         options: [480p, 720p]
+      aspect_ratio:
+        description: "Video aspect ratio"
+        required: true
+        type: choice
+        default: "16:9"
+        options: ["16:9", "9:16", "1:1", "4:5"]
+      fps:
+        description: "Video frame rate"
+        required: true
+        type: choice
+        default: "24"
+        options: ["24", "30", "60"]
       request_id:
         description: "Unique APK request identifier"
         required: true
@@ -94,6 +106,8 @@ jobs:
         env:
           DURATION: ${{ inputs.duration }}
           RESOLUTION: ${{ inputs.resolution }}
+          ASPECT_RATIO: ${{ inputs.aspect_ratio }}
+          FPS: ${{ inputs.fps }}
         run: |
           set -euo pipefail
           TOTAL=$((DURATION * 60))
@@ -115,6 +129,7 @@ jobs:
                 --duration "$SEGMENT_SECONDS" \
                 --offset "$OFFSET" \
                 --resolution "$RESOLUTION" \
+                --aspect-ratio "$ASPECT_RATIO" --fps "$FPS" \
                 --out "$SEGMENT"; then
                 SUCCESS=1; break
               fi
