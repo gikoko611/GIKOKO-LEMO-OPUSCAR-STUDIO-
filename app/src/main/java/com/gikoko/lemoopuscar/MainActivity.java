@@ -159,7 +159,7 @@ public class MainActivity extends Activity {
         for(String idea:ideas){Button q=button(idea);q.setTextSize(10);LinearLayout.LayoutParams qp=new LinearLayout.LayoutParams(0,dp(42),1);qp.rightMargin=dp(5);quick.addView(q,qp);q.setOnClickListener(v->promptInput.setText("Create a "+idea.toLowerCase(Locale.US)+" story with consistent characters, exciting scenes and a memorable ending."));}
         promptInput=edit("","Message your AI Director…",false);promptInput.setMinLines(3);promptInput.setMaxLines(6);promptInput.setBackground(shape(0xff0a1722,0xff247e7b,16));chat.addView(promptInput);
         Button send=button("➤  SEND TO AI DIRECTOR");chat.addView(send,new LinearLayout.LayoutParams(-1,dp(50)));
-        send.setOnClickListener(v->{String m=promptInput.getText().toString().trim();if(m.isEmpty()){setStatus("Write a story idea first.");return;}appendChatMessage("YOU",m);assistStory();});
+        send.setOnClickListener(v->{String m=promptInput.getText().toString().trim();if(m.isEmpty()){setStatus("Write a command or story idea first.");return;}appendChatMessage("YOU",m);sendToMasterAi();});
 
         LinearLayout tools=card(root);heading(tools,"STUDIO TOOLKIT","10 focused tools for story prep, finishing and cloud delivery.");
         addToolRow(tools,R.drawable.ic_tool_templates,"STARTER TEMPLATES","10 ready-to-edit film blueprints",()->openTemplateGallery(),R.drawable.ic_tool_character,"CHARACTER LAB","Build a consistent character bible",()->openCharacterBuilder());
@@ -583,6 +583,108 @@ public class MainActivity extends Activity {
                 main.post(()->{appendChatMessage("AI DIRECTOR","Cloud story generation failed: "+e.getMessage());setStatus("AI Director error: "+e.getMessage());if(generationDialog!=null){generationDialog.dismiss();generationDialog=null;}setBusy(false);});
             }
         }).start();
+    }
+
+    // Gemini Master AI: secure GitHub Actions proxy keeps GEMINI_API_KEY out of the APK.
+    private void sendToMasterAi(){
+        if(busy)return;
+        if(token==null){appendChatMessage("GEMINI MASTER AI","Please add your GitHub fine-grained token in Settings. Gemini API access is provided securely by the existing GEMINI_API_KEY Actions secret.");setStatus("GitHub token required for Gemini Master AI. Your Gemini key stays in GitHub Secrets.");return;}
+        final String prompt=promptInput.getText().toString().trim();
+        if(prompt.isEmpty())return;
+        final String requestId=UUID.randomUUID().toString().replace("-","").substring(0,12);
+        final String projectJson=buildProject().toString();
+        if(projectJson.length()>45000){setStatus("Project context is too large for Gemini. Shorten the project notes and try again.");return;}
+        setBusy(true);setStatus("Gemini Master AI is reviewing your command and current project…");
+        generationDialog=new android.app.ProgressDialog(this);generationDialog.setTitle("G.I KO KO  /  GEMINI MASTER AI");generationDialog.setMessage("Securely sending the command to Gemini through GitHub Actions…");generationDialog.setIndeterminate(true);generationDialog.setCancelable(false);generationDialog.show();
+        new Thread(()->{
+            try{
+                JSONObject inputs=new JSONObject();inputs.put("request_id",requestId);inputs.put("prompt",prompt);inputs.put("project_json",projectJson);
+                JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
+                ApiResponse dispatched=api("POST",API+"/actions/workflows/studio-agent.yml/dispatches",token,payload.toString());
+                if(dispatched.code!=204)throw new Exception("Gemini Master AI dispatch failed (HTTP "+dispatched.code+"): "+dispatched.body);
+                JSONObject run=null;
+                for(int i=0;i<90;i++){
+                    Thread.sleep(5000);
+                    ApiResponse rr=api("GET",API+"/actions/workflows/studio-agent.yml/runs?event=workflow_dispatch&per_page=30",token,null);
+                    if(rr.code!=200)throw new Exception("Could not find Gemini agent run (HTTP "+rr.code+"): "+rr.body);
+                    JSONArray runs=new JSONObject(rr.body).optJSONArray("workflow_runs");
+                    if(runs!=null)for(int j=0;j<runs.length();j++){JSONObject item=runs.getJSONObject(j);String title=item.optString("display_title",item.optString("name",""));if(title.contains(requestId)){run=item;break;}}
+                    if(run!=null)break;
+                }
+                if(run==null)throw new Exception("Gemini accepted the request but the agent run ID was not found. Check GitHub Actions.");
+                long runId=run.getLong("id");JSONObject latest=run;
+                for(int i=0;i<180;i++){
+                    ApiResponse sr=api("GET",API+"/actions/runs/"+runId,token,null);
+                    if(sr.code!=200)throw new Exception("Gemini agent status failed (HTTP "+sr.code+").");
+                    latest=new JSONObject(sr.body);
+                    if("completed".equals(latest.optString("status"))){if(!"success".equals(latest.optString("conclusion")))throw new Exception("Gemini agent workflow ended: "+latest.optString("conclusion")+". Check Actions logs and the GEMINI_API_KEY secret.");break;}
+                    Thread.sleep(4000);
+                }
+                if(!"completed".equals(latest.optString("status")))throw new Exception("Gemini is still processing. Please try again shortly.");
+                ApiResponse ar=api("GET",API+"/actions/runs/"+runId+"/artifacts?per_page=20",token,null);
+                if(ar.code!=200)throw new Exception("Gemini agent artifact list failed (HTTP "+ar.code+").");
+                JSONArray artifacts=new JSONObject(ar.body).optJSONArray("artifacts");JSONObject chosen=null;
+                if(artifacts!=null)for(int i=0;i<artifacts.length();i++){JSONObject item=artifacts.getJSONObject(i);if(!item.optBoolean("expired",false)&&item.optString("name","").equals("GI-KO-KO-AGENT-"+requestId)){chosen=item;break;}}
+                if(chosen==null)throw new Exception("Gemini completed but agent.json artifact is missing.");
+                ApiResponse redir=api("GET",API+"/actions/artifacts/"+chosen.getLong("id")+"/zip",token,null);
+                if(redir.code!=302||redir.location==null)throw new Exception("Could not download Gemini agent result (HTTP "+redir.code+").");
+                HttpURLConnection conn=(HttpURLConnection)new URL(redir.location).openConnection();conn.setConnectTimeout(30000);conn.setReadTimeout(60000);conn.setInstanceFollowRedirects(true);
+                String resultText=null;
+                try(ZipInputStream zin=new ZipInputStream(new BufferedInputStream(conn.getInputStream()))){ZipEntry entry;while((entry=zin.getNextEntry())!=null){if(!entry.isDirectory()&&entry.getName().toLowerCase(Locale.US).endsWith("agent.json")){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buf=new byte[8192];int n;while((n=zin.read(buf))!=-1)out.write(buf,0,n);resultText=out.toString("UTF-8");break;}}}finally{conn.disconnect();}
+                if(resultText==null)throw new Exception("Downloaded Gemini result did not contain agent.json.");
+                JSONObject result=new JSONObject(resultText);main.post(()->applyMasterAiResult(result));
+            }catch(Exception e){recordException("Gemini Master AI",e);main.post(()->{appendChatMessage("GEMINI MASTER AI","Request failed: "+e.getMessage());setStatus("Gemini Master AI error: "+e.getMessage());if(generationDialog!=null){generationDialog.dismiss();generationDialog=null;}setBusy(false);});}
+        }).start();
+    }
+
+    private void applyMasterAiResult(JSONObject result){
+        try{
+            JSONObject u=result.optJSONObject("project_updates");boolean changed=false;
+            if(u!=null){
+                if(u.has("title")){titleInput.setText(u.optString("title",""));changed=true;}
+                if(u.has("character_bible")){characterInput.setText(u.optString("character_bible",""));changed=true;}
+                if(u.has("scenes")){JSONArray a=u.optJSONArray("scenes");if(a!=null){StringBuilder b=new StringBuilder();for(int i=0;i<a.length();i++)b.append(a.optString(i)).append("\n");sceneInput.setText(b.toString());changed=true;}}
+                if(u.has("dialogue")){JSONArray a=u.optJSONArray("dialogue");if(a!=null){StringBuilder b=new StringBuilder();for(int i=0;i<a.length();i++){JSONObject d=a.optJSONObject(i);if(d!=null)b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(b.toString());changed=true;}}
+                if(u.has("duration_minutes")&&durationInput!=null){int n=u.optInt("duration_minutes",0);if(n>=1&&n<=180){durationInput.setText(Integer.toString(n));changed=true;}}
+                if(u.has("style")){String v=u.optString("style","");if(v.matches("hybrid|cartoon2d|cartoon3d|cinematic")){setSpinnerValue(styleSpinner,v);changed=true;}}
+                if(u.has("resolution")){String v=u.optString("resolution","");if(v.matches("480p|720p")){setSpinnerValue(resolutionSpinner,v);changed=true;}}
+                if(u.has("aspect_ratio")){String v=u.optString("aspect_ratio","");if(v.matches("16:9|9:16|1:1|4:5")){setSpinnerValue(aspectRatioSpinner,v);changed=true;}}
+                if(u.has("fps")){String v=u.optString("fps","");if(v.matches("24|30|60")){setSpinnerValue(frameRateSpinner,v);changed=true;}}
+                if(u.has("voice")){String v=u.optString("voice","");if(v.matches("No voice-over|English voice-over|Myanmar voice-over|Bilingual voice-over")){setSpinnerValue(voiceSpinner,v);changed=true;}}
+                if(u.has("background_music")){musicCheck.setChecked(u.optBoolean("background_music"));changed=true;}
+                if(u.has("sfx")){sfxCheck.setChecked(u.optBoolean("sfx"));changed=true;}
+                if(u.has("bilingual_subtitles")){subtitleCheck.setChecked(u.optBoolean("bilingual_subtitles"));changed=true;}
+            }
+            String reply=result.optString("reply","Gemini has processed your request.");
+            if(changed)reply+="\n\nProject settings updated. Review the fields before rendering.";
+            appendChatMessage("GEMINI MASTER AI",reply);
+            if(generationDialog!=null){generationDialog.dismiss();generationDialog=null;}setBusy(false);
+            String action=result.optString("action","chat");executeMasterAiAction(action,result.optString("confirmation_message",""));
+        }catch(Exception e){recordException("Apply Gemini agent result",e);if(generationDialog!=null){generationDialog.dismiss();generationDialog=null;}setBusy(false);setStatus("Could not apply Gemini response: "+e.getMessage());}
+    }
+
+    private void executeMasterAiAction(String action,String confirmation){
+        switch(action){
+            case "open_character_reference_lab": openCharacterReferenceLab();break;
+            case "open_character_builder": openCharacterBuilder();break;
+            case "open_dialogue_desk": openDialogueBuilder();break;
+            case "open_subtitle_preview": previewSubtitles();break;
+            case "open_audio_lab": openAudioLab();break;
+            case "open_project_library": openProjectLibrary();break;
+            case "open_brand_kit": openBrandKit();break;
+            case "open_format_presets": openFormatPresets();break;
+            case "open_facebook_content": openFacebookContentSystem();break;
+            case "open_template_gallery": openTemplateGallery();break;
+            case "open_render_center": openRenderCenter();break;
+            case "open_diagnostics": showDiagnosticCenter();break;
+            case "open_settings": openSettings();break;
+            case "save_project": saveProject();setStatus("Project saved from Gemini command.");break;
+            case "check_render_status": checkLastRun();break;
+            case "retry_render": new android.app.AlertDialog.Builder(this).setTitle("GEMINI REQUEST — RETRY RENDER").setMessage("Retry the failed GitHub render job now?").setPositiveButton("RETRY",(d,w)->retryFailedRender()).setNegativeButton("CANCEL",null).show();break;
+            case "download_latest_mp4": downloadLastRun();break;
+            case "start_render": new android.app.AlertDialog.Builder(this).setTitle("CONFIRM CLOUD RENDER").setMessage(confirmation.isEmpty()?"Gemini is ready to start a Cloud Render using the current project settings. Continue?":confirmation).setPositiveButton("START RENDER",(d,w)->{if(ensureStoragePermission())startRender();else{pendingStart=true;requestStoragePermission();}}).setNegativeButton("CANCEL",null).show();break;
+            default: setStatus("Gemini Master AI is ready. No app action was requested.");break;
+        }
     }
     private void applyStoryDraft(JSONObject story,String provider){
         titleInput.setText(story.optString("title","Untitled Story"));
