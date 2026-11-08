@@ -22,6 +22,12 @@ on:
         required: true
         type: choice
         options: [hybrid, cartoon2d, cartoon3d, cinematic]
+      gemini_model:
+        description: Gemini free-tier model selected in the Android app
+        required: true
+        type: choice
+        default: gemini-3.8-flash
+        options: [gemini-3.8-flash, gemini-3.6-flash, gemini-2.5-flash, gemini-2.5-flash-lite]
 
 permissions:
   contents: read
@@ -42,6 +48,7 @@ jobs:
           STORY_PROMPT: ${{ inputs.prompt }}
           STORY_DURATION: ${{ inputs.duration }}
           STORY_STYLE: ${{ inputs.style }}
+          GEMINI_MODEL: ${{ inputs.gemini_model }}
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -53,6 +60,9 @@ jobs:
           duration=os.environ["STORY_DURATION"]
           if not duration.isdigit() or not 1 <= int(duration) <= 180: raise SystemExit("Duration must be a whole number from 1 to 180 minutes.")
           style=os.environ["STORY_STYLE"]
+          model=os.environ.get("GEMINI_MODEL","gemini-3.8-flash").strip()
+          allowed_models={"gemini-3.8-flash","gemini-3.6-flash","gemini-2.5-flash","gemini-2.5-flash-lite"}
+          if model not in allowed_models: raise SystemExit("Unsupported Gemini model. Choose a listed free-tier model.")
           instruction=f"""You are the G.I KO KO AI Director. Create a production-ready story for an Android-first cartoon/cinematic studio.
           User idea: {prompt}
           Duration: {duration} minutes. Style: {style}.
@@ -67,7 +77,7 @@ jobs:
           Include at least 2 bilingual dialogue turns per scene where practical. Keep the same characters and continuity throughout.
           Do not include markdown fences, external URLs, animation code, or claims that footage is AI-generated."""
           body={"contents":[{"parts":[{"text":instruction}]}],"generationConfig":{"temperature":0.75,"responseMimeType":"application/json"}}
-          url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+key
+          url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+key
           req=urllib.request.Request(url,data=json.dumps(body).encode(),headers={"Content-Type":"application/json"},method="POST")
           try:
               with urllib.request.urlopen(req,timeout=120) as res: data=json.loads(res.read().decode())
