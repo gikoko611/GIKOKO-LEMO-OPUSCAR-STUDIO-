@@ -108,23 +108,30 @@ jobs:
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
+          CHECK="$RUNNER_TEMP/apk-check"
           test -s "$APK"
-          mkdir -p "$RUNNER_TEMP/apk-check"
-          unzip -q "$APK" 'classes*.dex' 'AndroidManifest.xml' -d "$RUNNER_TEMP/apk-check"
-          test -s "$RUNNER_TEMP/apk-check/AndroidManifest.xml"
-          test -s "$RUNNER_TEMP/apk-check/classes.dex"
-          DEX="$RUNNER_TEMP/apk-check/classes.dex"
-          DEX_SIZE=$(stat -c%s "$DEX")
+          mkdir -p "$CHECK"
+          unzip -q "$APK" 'classes*.dex' 'AndroidManifest.xml' -d "$CHECK"
+          test -s "$CHECK/AndroidManifest.xml"
+          mapfile -t DEX_FILES < <(find "$CHECK" -maxdepth 1 -type f -name 'classes*.dex' | sort -V)
+          test "${#DEX_FILES[@]}" -ge 1
+          TOTAL_DEX=0
+          for dex in "${DEX_FILES[@]}"; do
+            size=$(stat -c%s "$dex")
+            TOTAL_DEX=$((TOTAL_DEX + size))
+            echo "$(basename "$dex"): $size bytes"
+          done
           echo "APK size: $(stat -c%s "$APK") bytes"
-          echo "classes.dex size: $DEX_SIZE bytes"
-          if [ "$DEX_SIZE" -lt 4096 ]; then
-            echo "ERROR: classes.dex is suspiciously small; refusing to publish an empty/stub APK."
+          echo "Total DEX size: $TOTAL_DEX bytes"
+          if [ "$TOTAL_DEX" -lt 4096 ]; then
+            echo "ERROR: Combined DEX payload is suspiciously small."
             exit 1
           fi
-          strings "$DEX" > "$RUNNER_TEMP/dex-strings.txt"
-          grep -F 'Lcom/gikoko/lemoopuscar/MainActivity;' "$RUNNER_TEMP/dex-strings.txt"
-          grep -F 'Lcom/gikoko/lemoopuscar/ProviderManager;' "$RUNNER_TEMP/dex-strings.txt"
-          unzip -l "$APK" | grep -E 'classes.dex|AndroidManifest.xml'
+          cat "${DEX_FILES[@]}" > "$CHECK/all-dex.bin"
+          strings "$CHECK/all-dex.bin" > "$CHECK/dex-strings.txt"
+          grep -F 'Lcom/gikoko/lemoopuscar/MainActivity;' "$CHECK/dex-strings.txt"
+          grep -F 'Lcom/gikoko/lemoopuscar/ProviderManager;' "$CHECK/dex-strings.txt"
+          unzip -l "$APK" | grep -E 'classes[0-9]*\.dex|AndroidManifest.xml'
           ls -lh "$APK"
       - name: Upload APK
         uses: actions/upload-artifact@v4
