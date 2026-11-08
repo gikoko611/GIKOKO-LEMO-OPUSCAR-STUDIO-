@@ -44,13 +44,13 @@ def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--project",required=True); ap.add_argument("--duration",required=True,type=int)
     ap.add_argument("--offset",required=True,type=int); ap.add_argument("--resolution",default="480p")
-    ap.add_argument("--out",required=True); a=ap.parse_args()
+    ap.add_argument("--out",required=True); ap.add_argument("--aspect-ratio",default="16:9"); ap.add_argument("--fps",type=int,default=24); a=ap.parse_args()
     p=json.loads(Path(a.project).read_text(encoding="utf-8"))
     plan=p.get("animation_plan") or []
     scenes=[(str(x.get("title","Scene"))+" — "+str(x.get("description","")))[:600] for x in plan] if plan else (p.get("scenes") or ["Opening","A surprising problem","Action and comic twist","Final reveal"])
     dialogue=p.get("dialogue") or []; total=max(1,int(p.get("duration_minutes",1))*60)
     duration=max(1,a.duration); offset=max(0,a.offset)
-    width,height=(1280,720) if a.resolution=="720p" else (854,480)
+    base=720 if a.resolution=="720p" else 480\n    dimensions={"16:9":(base*16//9,base),"9:16":(base,base*16//9),"1:1":(base,base),"4:5":(base*4//5,base)}\n    width,height=dimensions.get(a.aspect_ratio,dimensions["16:9"])
     palettes={"cartoon2d":["0x142b2a","0x263c4b","0x49352a","0x263b32"],
               "cartoon3d":["0x172a36","0x28394e","0x4b3429","0x263d36"],
               "hybrid":["0x101827","0x264a52","0x45312c","0x1b2d3a"],
@@ -80,7 +80,7 @@ def main():
             if enable: part+=f":enable='{enable}'"
             filters.append(part+f"[{nxt}]"); chain=nxt
         draw("title",str(p.get("title") or "G.I KO KO STORY")[:70],"h*0.075",int(height*.075),color="0xffd780")
-        draw("credit","POWERED BY I KO KO","h*0.20",int(height*.027),color="0xffe8b0",box="0x000000@0.22")
+        draw("credit",str(p.get("watermark") or "POWERED BY I KO KO")[:100],"h*0.20",int(height*.027),color="0xffe8b0",box="0x000000@0.22")
         draw("character",textwrap.fill(str(p.get("character_bible") or "A consistent royal hero."),58)[:650],
              "h*0.77",int(height*.026),font=myanmar,enable="between(t,0,8)",box="0x000000@0.55")
         span=total/max(1,len(scenes))
@@ -112,10 +112,10 @@ def main():
         else:
             bg=palette[(offset//max(1,int(span)))%len(palette)]
         run(["ffmpeg","-y","-hide_banner","-loglevel","error",
-             "-f","lavfi","-i",f"color=c={bg}:s={width}x{height}:r=24:d={duration}",
+             "-f","lavfi","-i",f"color=c={bg}:s={width}x{height}:r={a.fps}:d={duration}",
              "-loop","1","-framerate","24","-i",str(mascot),
              "-filter_complex",";".join(filters),"-map","[vout]","-an","-t",str(duration),
-             "-r","24","-c:v","libx264","-preset","ultrafast","-crf","27","-pix_fmt","yuv420p",
+             "-r",str(a.fps),"-c:v","libx264","-preset","ultrafast","-crf","27","-pix_fmt","yuv420p",
              "-movflags","+faststart","-threads","2",str(out)])
     if not out.exists() or out.stat().st_size<1000: raise SystemExit("No valid MP4 segment produced.")
     print(f"Rendered {out} ({out.stat().st_size} bytes)",flush=True)
