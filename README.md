@@ -7,14 +7,13 @@
 ### 0.2.0 Professional Studio Upgrade
 - Three selectable premium themes in Settings: NEBULA PRISM, OBSIDIAN LUX and AURORA GLASS, with dynamic 3D-style bordered cards.
 - Cloud Render supports 16:9, 9:16, 1:1 and 4:5 output ratios plus 24/30/60 FPS selection.
-- Local Device Render creates a short, silent H.264 MP4 preview on-device (1–15 seconds) using Android MediaCodec; it is a lightweight preview renderer, not a replacement for full cloud rendering or cloud voice/music/subtitle mastering.
-- Local output is saved in Downloads. For full-length projects, voice-over, generated music, SFX and MP4 subtitle muxing, use Cloud Render.
-- Local rendering depends on the handset's H.264 encoder; if unsupported or memory-constrained, switch to Cloud Render.
+- The normal user interface is Cloud Render-first. Local Device Render remains in the codebase but is temporarily hidden from the user interface.
 
 
 ### 1. Android APK
-- Write a film prompt and title.
-- Edit a character bible, scene outline and bilingual dialogue.
+- Use the AI Director chat composer to describe a film idea in natural language.
+- Gemini Cloud Story Assist creates a title, consistent character bible, scene outline and bilingual dialogue using the `GEMINI_API_KEY` Actions secret.
+- Edit the character bible, scene outline and bilingual dialogue before rendering.
 - Save the project locally on the phone.
 - Select Hybrid, Cartoon 2D, Cartoon 3D or Cinematic; 1, 5, 10 or 30 minutes; 480p or 720p.
 - Start cloud rendering, check workflow step progress, retry failed jobs and download the MP4 from inside the APK.
@@ -64,11 +63,14 @@
 5. Generate the token, paste it in the APK and tap SAVE TOKEN. Never paste the token into chat or commit it.
 6. The app validates workflow access and stores the token encrypted on-device.
 
-## AI provider setup
-- Configure an HTTPS OpenAI-compatible Base URL.
-- Enter the model ID and API key.
-- Tap SAVE AI PROVIDER; the API key is encrypted with Android Keystore.
-- Tap AI STORY ASSIST to draft scenes, bilingual dialogue and the animation scene-plan code. Without an AI key, the app offers a basic offline scene-outline helper instead.
+## Gemini Cloud AI Director setup
+1. Add the repository secret `GEMINI_API_KEY` under Settings → Secrets and variables → Actions.
+2. Save a GitHub fine-grained token in the APK with Actions read/write permission.
+3. Enter a story idea in the AI Director chat and tap SEND TO AI DIRECTOR.
+4. The app dispatches `.github/workflows/story-assist.yml`; Gemini 2.5 Flash returns a structured story artifact, which the app imports into Project Details.
+5. The same `GEMINI_API_KEY` secret is used by Cloud Render for Gemini TTS and by the AI render-repair workflow. The key is never embedded in the APK.
+
+Advanced OpenAI-compatible provider settings are temporarily hidden from the standard UI. Existing saved provider settings are preserved for later re-enabling.
 
 ## Build APK
 Open GitHub Actions → Build G.I Ko Ko ViD Gen APK → Run workflow. Download artifact GI-KO-KO-VID-GEN-APK and install app-debug.apk on Android 10 / ARMv7.
@@ -82,7 +84,7 @@ Open GitHub Actions → Build G.I Ko Ko ViD Gen APK → Run workflow. Download a
 
 
 ## End-to-end render pipeline
-1. In the APK, configure a supported text AI provider and tap **AI STORY ASSIST**. The prompt includes the selected duration and style so long-form projects request more scenes/dialogue.
+1. In the APK, enter a story idea in **AI DIRECTOR CHAT** and tap **SEND TO AI DIRECTOR**. Gemini Cloud uses the selected duration and style to generate the story draft.
 2. Review the generated title, character bible, scenes, bilingual dialogue and AI animation scene plan. Save the project.
 3. Select **Hybrid**, **Bilingual voice-over**, **30 minutes**, and the required resolution, then tap **START RENDER**.
 4. The APK dispatches `.github/workflows/cloud-render.yml`. GitHub Actions validates and executes `animation_code` through `scripts/animation_runtime.js`, then renders recoverable one-minute segments using `scripts/render_video.py` and joins them with FFmpeg.
