@@ -166,8 +166,7 @@ public class MainActivity extends Activity {
 
         LinearLayout render=card(root);heading(render,"02  •  RENDER STUDIO","Cloud rendering • MP4 output");
         startButton=button("▶   START VIDEO RENDER");render.addView(startButton);
-        startButton.setOnClickListener(v->{if(token==null){setStatus("Open Settings and add your GitHub token first.");return;}
-            if(ensureStoragePermission())startRender();else{pendingStart=true;requestStoragePermission();}});
+        startButton.setOnClickListener(v->{if(ensureStoragePermission())startRender();else{pendingStart=true;requestStoragePermission();}});
         LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);rp.topMargin=dp(8);render.addView(actions,rp);
         retryButton=button("↻ RETRY");actions.addView(retryButton,new LinearLayout.LayoutParams(0,dp(46),1));retryButton.setOnClickListener(v->retryFailedRender());
         checkButton=button("◉ STATUS");LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(46),1);cp.leftMargin=dp(7);actions.addView(checkButton,cp);checkButton.setOnClickListener(v->checkLastRun());
@@ -283,6 +282,9 @@ public class MainActivity extends Activity {
             }p.put("dialogue",dialogue);
             p.put("voice",voiceSpinner.getSelectedItem().toString());p.put("background_music",musicCheck.isChecked());p.put("sfx",sfxCheck.isChecked());p.put("myanmar_subtitles",subtitleCheck.isChecked());
             p.put("style",styleSpinner.getSelectedItem().toString());p.put("duration_minutes",durationSpinner.getSelectedItem().toString());p.put("resolution",resolutionSpinner.getSelectedItem().toString());
+            p.put("aspect_ratio",aspectRatioSpinner==null?"16:9":aspectRatioSpinner.getSelectedItem().toString());
+            p.put("fps",frameRateSpinner==null?"24":frameRateSpinner.getSelectedItem().toString());
+            p.put("watermark",watermarkInput==null?"POWERED BY I KO KO":watermarkInput.getText().toString().trim());
         }catch(Exception ignored){}return p;
     }
     private void saveProject(){
@@ -297,6 +299,9 @@ public class MainActivity extends Activity {
             JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(b.toString());}
             musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("myanmar_subtitles",true));
             setSpinnerValue(styleSpinner,p.optString("style","cartoon2d"));setSpinnerValue(durationSpinner,p.optString("duration_minutes","1"));setSpinnerValue(resolutionSpinner,p.optString("resolution","480p"));setSpinnerValue(voiceSpinner,p.optString("voice","No voice-over"));
+            if(aspectRatioSpinner!=null)setSpinnerValue(aspectRatioSpinner,p.optString("aspect_ratio","16:9"));
+            if(frameRateSpinner!=null)setSpinnerValue(frameRateSpinner,p.optString("fps","24"));
+            if(watermarkInput!=null)watermarkInput.setText(p.optString("watermark","POWERED BY I KO KO"));
         }catch(Exception ignored){}
     }
     private void assistStory(){
@@ -475,6 +480,8 @@ public class MainActivity extends Activity {
 
     private void startRender(){
         if(busy)return;
+        if(renderModeSpinner!=null && "Local Device Render".equals(renderModeSpinner.getSelectedItem().toString())){startLocalRender();return;}
+        if(token==null){setStatus("Open Settings and add your GitHub token for Cloud Render.");return;}
         final String style=styleSpinner.getSelectedItem().toString();
         final String duration=durationSpinner.getSelectedItem().toString();
         final String resolution=resolutionSpinner.getSelectedItem().toString();
@@ -489,6 +496,8 @@ public class MainActivity extends Activity {
         new Thread(()->{
             try{
                 JSONObject inputs=new JSONObject();inputs.put("style",style);inputs.put("duration",duration);inputs.put("resolution",resolution);inputs.put("request_id",requestId);
+                inputs.put("aspect_ratio",aspectRatioSpinner.getSelectedItem().toString());
+                inputs.put("fps",frameRateSpinner.getSelectedItem().toString());
                 inputs.put("project_json",projectJson);
                 JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
                 ApiResponse dispatched=api("POST",API+"/actions/workflows/"+WORKFLOW+"/dispatches",token,payload.toString());
@@ -531,6 +540,20 @@ public class MainActivity extends Activity {
             }catch(Exception e){recordException("Cloud render",e);setStatus("Render error: "+e.getMessage());}
             finally{setBusy(false);}
         }).start();
+    }
+
+    private void startLocalRender(){
+        if(busy)return;
+        final JSONObject project=buildProject();
+        final int seconds=Integer.parseInt(localDurationSpinner.getSelectedItem().toString());
+        final String resolution=resolutionSpinner.getSelectedItem().toString();
+        final String ratio=aspectRatioSpinner.getSelectedItem().toString();
+        final int fps=Integer.parseInt(frameRateSpinner.getSelectedItem().toString());
+        saveProject();setBusy(true);setStatus("LOCAL RENDER — preparing on-device H.264 encoder…");
+        new Thread(()->{File downloads=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);File target=new File(downloads,"GIKOKO-LOCAL-"+System.currentTimeMillis()+".mp4");try{
+            LocalRenderEngine.render(project,target,seconds,resolution,ratio,fps,(done,total,stage)->{if(done%Math.max(1,fps*2)==0||done==total)setStatus(stage+" — "+(done*100/Math.max(1,total))+"% ("+done+"/"+total+" frames)");});
+            setStatus("LOCAL RENDER COMPLETE — "+target.getAbsolutePath()+" ("+(target.length()/1024)+" KB). Silent preview MP4 saved to Downloads.");
+        }catch(Exception e){recordException("Local video render",e);setStatus("Local render failed: "+e.getMessage()+" — try 480p / 24 FPS or use Cloud Render.");}finally{setBusy(false);}}).start();
     }
 
     private void retryFailedRender(){
