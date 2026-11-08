@@ -54,8 +54,8 @@ public class MainActivity extends Activity {
     private static final String TOKEN_KEY="encrypted_pat";
     private static final String RUN_KEY="last_run_id";
     private final Handler main=new Handler(Looper.getMainLooper());
-    private EditText tokenInput,aiBaseInput,aiModelInput,aiKeyInput,titleInput,promptInput,characterInput,sceneInput,dialogueInput;
-    private Spinner styleSpinner,durationSpinner,resolutionSpinner,aspectRatioSpinner,frameRateSpinner,renderModeSpinner,localDurationSpinner,themeSpinner;
+    private EditText tokenInput,aiBaseInput,aiModelInput,aiKeyInput,titleInput,promptInput,characterInput,sceneInput,dialogueInput,durationInput;
+    private Spinner styleSpinner,resolutionSpinner,aspectRatioSpinner,frameRateSpinner,renderModeSpinner,localDurationSpinner,themeSpinner;
     private EditText watermarkInput;
     private String watermarkLogoBase64="";
     private android.app.ProgressDialog generationDialog;
@@ -181,12 +181,12 @@ public class MainActivity extends Activity {
 
         LinearLayout config=card(root);heading(config,"03  /  PRODUCTION SETTINGS","Choose output format, quality, voice and finishing options.");
         config.addView(label("VISUAL STYLE",11));styleSpinner=spinner(new String[]{"hybrid","cartoon2d","cartoon3d","cinematic"});config.addView(styleSpinner);
-        config.addView(label("VIDEO LENGTH  •  MINUTES",11));durationSpinner=spinner(new String[]{"1","2","3","5","10","30"});config.addView(durationSpinner);
+        config.addView(label("VIDEO LENGTH  •  MINUTES (TYPE YOUR OWN)",11));durationInput=edit("2","Enter whole minutes (1–180)",false);durationInput.setInputType(InputType.TYPE_CLASS_NUMBER);config.addView(durationInput);
         config.addView(label("OUTPUT QUALITY",11));resolutionSpinner=spinner(new String[]{"480p","720p"});config.addView(resolutionSpinner);
         config.addView(label("ASPECT RATIO",11));aspectRatioSpinner=spinner(new String[]{"16:9","9:16","1:1","4:5"});config.addView(aspectRatioSpinner);
         config.addView(label("FRAME RATE",11));frameRateSpinner=spinner(new String[]{"24","30","60"});config.addView(frameRateSpinner);
         config.addView(label("VOICE-OVER",11));voiceSpinner=spinner(new String[]{"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"});config.addView(voiceSpinner);
-        setSpinnerValue(durationSpinner,"2");setSpinnerValue(aspectRatioSpinner,"9:16");setSpinnerValue(voiceSpinner,"Bilingual voice-over");
+        setSpinnerValue(aspectRatioSpinner,"9:16");setSpinnerValue(voiceSpinner,"Bilingual voice-over");
         musicCheck=new CheckBox(this);musicCheck.setText("Background music");musicCheck.setTextColor(themeText);musicCheck.setChecked(true);config.addView(musicCheck);
         sfxCheck=new CheckBox(this);sfxCheck.setText("Sound effects");sfxCheck.setTextColor(themeText);sfxCheck.setChecked(true);config.addView(sfxCheck);
         subtitleCheck=new CheckBox(this);subtitleCheck.setText("Bilingual subtitles  •  English + Myanmar");subtitleCheck.setTextColor(themeText);subtitleCheck.setChecked(true);config.addView(subtitleCheck);
@@ -268,6 +268,14 @@ public class MainActivity extends Activity {
         try{prefs().edit().putString("ai_base",base).putString("ai_model",model).apply();if(!key.isEmpty())prefs().edit().putString("ai_key_enc",encrypt(key)).apply();aiKeyInput.setText("");setStatus("AI provider settings saved. API key encrypted on device.");}
         catch(Exception e){recordException("Save AI provider",e);setStatus("Could not encrypt AI key: "+e.getMessage());}
     }
+    private String getDurationMinutes(){
+        String raw=durationInput==null?"2":durationInput.getText().toString().trim();
+        if(!raw.matches("[0-9]{1,3}"))throw new IllegalArgumentException("Enter a whole number of minutes from 1 to 180.");
+        int minutes=Integer.parseInt(raw);
+        if(minutes<1||minutes>180)throw new IllegalArgumentException("Video duration must be between 1 and 180 minutes.");
+        return Integer.toString(minutes);
+    }
+
     private JSONObject buildProject(){
         JSONObject p=new JSONObject();
         try{
@@ -283,7 +291,7 @@ public class MainActivity extends Activity {
                 String[] parts=line.split("\\|",2);JSONObject d=new JSONObject();d.put("english",parts[0].trim());d.put("myanmar",parts.length>1?parts[1].trim():"");dialogue.put(d);
             }p.put("dialogue",dialogue);
             p.put("voice",voiceSpinner.getSelectedItem().toString());p.put("background_music",musicCheck.isChecked());p.put("sfx",sfxCheck.isChecked());p.put("bilingual_subtitles",subtitleCheck.isChecked());p.put("myanmar_subtitles",subtitleCheck.isChecked());
-            p.put("style",styleSpinner.getSelectedItem().toString());p.put("duration_minutes",durationSpinner.getSelectedItem().toString());p.put("resolution",resolutionSpinner.getSelectedItem().toString());
+            p.put("style",styleSpinner.getSelectedItem().toString());p.put("duration_minutes",getDurationMinutes());p.put("resolution",resolutionSpinner.getSelectedItem().toString());
             p.put("aspect_ratio",aspectRatioSpinner==null?"16:9":aspectRatioSpinner.getSelectedItem().toString());
             p.put("fps",frameRateSpinner==null?"24":frameRateSpinner.getSelectedItem().toString());
             p.put("watermark",watermarkInput==null?"POWERED BY I KO KO":watermarkInput.getText().toString().trim());
@@ -325,7 +333,7 @@ public class MainActivity extends Activity {
         for(int i=0;i<templates.length;i++)names[i]="✦  "+templates[i][0];
         new android.app.AlertDialog.Builder(this).setTitle("STARTER TEMPLATE LIBRARY").setItems(names,(d,which)->{
             String[] t=templates[which];promptInput.setText(t[1]);titleInput.setText(t[0]);characterInput.setText(t[2]);sceneInput.setText(t[3]);dialogueInput.setText(t[4]);
-            setSpinnerValue(styleSpinner,t[5]);setSpinnerValue(durationSpinner,t[6]);setStatus("Template loaded: "+t[0]+". Edit any section before cloud generation.");saveProject();
+            setSpinnerValue(styleSpinner,t[5]);if(durationInput!=null)durationInput.setText(t[6]);setStatus("Template loaded: "+t[0]+". Edit any section before cloud generation.");saveProject();
         }).setNegativeButton("CLOSE",null).show();
     }
     private void openCharacterReferenceLab(){
@@ -391,10 +399,10 @@ public class MainActivity extends Activity {
         new android.app.AlertDialog.Builder(this).setTitle("FACEBOOK CONTENT SYSTEM").setView(panel)
             .setPositiveButton("APPLY",(d,w)->{
                 facebookContentMode=enabled.isChecked();
-                setSpinnerValue(durationSpinner,"2");setSpinnerValue(aspectRatioSpinner,"9:16");
+                if(durationInput!=null&&durationInput.getText().toString().trim().isEmpty())durationInput.setText("2");setSpinnerValue(aspectRatioSpinner,"9:16");
                 setSpinnerValue(voiceSpinner,"Bilingual voice-over");
                 subtitleCheck.setChecked(true);musicCheck.setChecked(true);sfxCheck.setChecked(true);
-                saveProject();setStatus("Facebook Creator Mode applied: mixed content, 2-minute default, 9:16 Reels, bilingual voice and subtitles. Change duration to 1 or 3 minutes when needed.");
+                saveProject();setStatus("Facebook Creator Mode applied: mixed content, custom minutes (1–180), 9:16 Reels, bilingual voice and subtitles. Type your preferred whole-minute duration.");
             }).setNegativeButton("CANCEL",null).show();
     }
 
@@ -486,7 +494,7 @@ public class MainActivity extends Activity {
             watermarkLogoBase64=p.optString("watermark_logo_base64",prefs().getString("watermark_logo_base64",""));
             JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(b.toString());}
             musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("bilingual_subtitles",p.optBoolean("myanmar_subtitles",true)));
-            facebookContentMode=p.optBoolean("facebook_content_mode",p.optString("content_mode","mixed").equals("mixed"));setSpinnerValue(styleSpinner,p.optString("style","hybrid"));setSpinnerValue(durationSpinner,p.optString("duration_minutes","2"));setSpinnerValue(resolutionSpinner,p.optString("resolution","480p"));setSpinnerValue(voiceSpinner,p.optString("voice","No voice-over"));
+            facebookContentMode=p.optBoolean("facebook_content_mode",p.optString("content_mode","mixed").equals("mixed"));setSpinnerValue(styleSpinner,p.optString("style","hybrid"));if(durationInput!=null)durationInput.setText(p.optString("duration_minutes","2"));setSpinnerValue(resolutionSpinner,p.optString("resolution","480p"));setSpinnerValue(voiceSpinner,p.optString("voice","No voice-over"));
             if(aspectRatioSpinner!=null)setSpinnerValue(aspectRatioSpinner,p.optString("aspect_ratio","16:9"));
             if(frameRateSpinner!=null)setSpinnerValue(frameRateSpinner,p.optString("fps","24"));
             if(watermarkInput!=null)watermarkInput.setText(p.optString("watermark","POWERED BY I KO KO"));
@@ -496,7 +504,7 @@ public class MainActivity extends Activity {
     private void assistStory(){
         if(busy)return;
         final String userPrompt=promptInput.getText().toString().trim();
-        final String prompt=facebookContentMode ? userPrompt+"\n\nFACEBOOK MIXED-CONTENT PRODUCTION BRIEF: Create an original Facebook-ready episode combining suitable elements from comedy, Myanmar history and culture, storytelling, moral lessons, education, action/adventure and motivation. Select only the categories that fit the idea; do not force every category into one episode. Hook viewers in the first 3 seconds, use a clear beginning, escalating middle and satisfying ending, short scene beats, strong visual actions, and natural bilingual English + Myanmar dialogue. Keep character appearance consistent. Target 1–3 minutes, with enough scenes and dialogue to fill the selected duration. Avoid copyrighted characters, copied scripts, unlicensed music and misleading factual claims." : userPrompt;
+        final String durationForPrompt;\n        try{durationForPrompt=getDurationMinutes();}catch(IllegalArgumentException e){setStatus(e.getMessage());return;}\n        final String prompt=facebookContentMode ? userPrompt+"\n\nFACEBOOK MIXED-CONTENT PRODUCTION BRIEF: Create an original Facebook-ready episode combining suitable elements from comedy, Myanmar history and culture, storytelling, moral lessons, education, action/adventure and motivation. Select only the categories that fit the idea; do not force every category into one episode. Hook viewers in the first 3 seconds, use a clear beginning, escalating middle and satisfying ending, short scene beats, strong visual actions, and natural bilingual English + Myanmar dialogue. Keep character appearance consistent. Target exactly about "+durationForPrompt+" minutes, with enough scenes and dialogue to fill the selected duration. Avoid copyrighted characters, copied scripts, unlicensed music and misleading factual claims." : userPrompt;
         if(prompt.isEmpty()){setStatus("Enter a film idea first.");return;}
         if(token==null){
             new ProviderManager(this).generateStory(prompt,(story,err,provider)->{
@@ -506,7 +514,7 @@ public class MainActivity extends Activity {
             return;
         }
         final String requestId=UUID.randomUUID().toString().replace("-","").substring(0,12);
-        final String duration=durationSpinner.getSelectedItem().toString();
+        final String duration;try{duration=getDurationMinutes();}catch(IllegalArgumentException e){setStatus(e.getMessage());return;}
         final String style=styleSpinner.getSelectedItem().toString();
         setBusy(true);setStatus("AI Director is preparing your storyboard with Gemini Cloud…");
         generationDialog=new android.app.ProgressDialog(this);
@@ -754,7 +762,7 @@ public class MainActivity extends Activity {
         if(renderModeSpinner!=null && "Local Device Render".equals(renderModeSpinner.getSelectedItem().toString())){startLocalRender();return;}
         if(token==null){setStatus("Open Settings and add your GitHub token for Cloud Render.");return;}
         final String style=styleSpinner.getSelectedItem().toString();
-        final String duration=durationSpinner.getSelectedItem().toString();
+        final String duration;try{duration=getDurationMinutes();}catch(IllegalArgumentException e){setStatus(e.getMessage());return;}
         final String resolution=resolutionSpinner.getSelectedItem().toString();
         final String requestId=UUID.randomUUID().toString().replace("-","").substring(0,12);
         prefs().edit().putString("last_request_id",requestId).apply();
