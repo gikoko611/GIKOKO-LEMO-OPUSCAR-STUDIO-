@@ -16,7 +16,7 @@ on:
         description: Target duration in minutes
         required: true
         type: choice
-        options: ["1", "5", "10", "30"]
+        options: ["1", "2", "3", "5", "10", "30"]
       style:
         description: Visual style
         required: true
@@ -62,7 +62,7 @@ jobs:
             "scenes":["scene 1 description","scene 2 description"],
             "dialogue":[{{"english":"English dialogue","myanmar":"မြန်မာဘာသာပြန်"}}]
           }}
-          For 1 minute create 4-6 scenes; 5 minutes 8-12 scenes; 10 minutes 12-18 scenes; 30 minutes 18-30 scenes.
+          For 1 minute create 4-6 scenes; 2 minutes 6-8 scenes; 3 minutes 8-10 scenes; 5 minutes 8-12 scenes; 10 minutes 12-18 scenes; 30 minutes 18-30 scenes. For Facebook mixed-content projects, use a compelling first-3-second hook, fast visual beats, a satisfying ending and natural bilingual dialogue. Avoid copyrighted characters, copied scripts and unlicensed music.
           Include at least 2 bilingual dialogue turns per scene where practical. Keep the same characters and continuity throughout.
           Do not include markdown fences, external URLs, animation code, or claims that footage is AI-generated."""
           body={"contents":[{"parts":[{"text":instruction}]}],"generationConfig":{"temperature":0.75,"responseMimeType":"application/json"}}
