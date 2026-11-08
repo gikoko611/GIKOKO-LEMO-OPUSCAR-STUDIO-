@@ -15,7 +15,7 @@ on:
         required: true
         type: choice
         default: "1"
-        options: ["1", "5", "10", "30"]
+        options: ["1", "2", "3", "5", "10", "30"]
       resolution:
         description: "Export resolution"
         required: true
@@ -171,7 +171,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_TTS_MODEL: gemini-3.8-flash-tts
-          TTS_PROVIDER: auto
+          TTS_PROVIDER: edge
         run: |
           python scripts/audio_pipeline.py \
             --project project.json \
