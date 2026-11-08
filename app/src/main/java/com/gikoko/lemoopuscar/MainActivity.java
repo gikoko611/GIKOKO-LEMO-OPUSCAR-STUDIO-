@@ -532,6 +532,7 @@ public class MainActivity extends Activity {
         final String requestId=UUID.randomUUID().toString().replace("-","").substring(0,12);
         final String duration;try{duration=getDurationMinutes();}catch(IllegalArgumentException e){setStatus(e.getMessage());return;}
         final String style=styleSpinner.getSelectedItem().toString();
+        final String geminiModel=getSelectedGeminiModel();
         setBusy(true);setStatus("AI Director is preparing your storyboard with Gemini Cloud…");
         generationDialog=new android.app.ProgressDialog(this);
         generationDialog.setTitle("G.I KO KO  /  AI DIRECTOR");
@@ -540,7 +541,7 @@ public class MainActivity extends Activity {
         new Thread(()->{
             try{
                 JSONObject inputs=new JSONObject();
-                inputs.put("request_id",requestId);inputs.put("prompt",prompt);inputs.put("duration",duration);inputs.put("style",style);inputs.put("gemini_model",getSelectedGeminiModel());
+                inputs.put("request_id",requestId);inputs.put("prompt",prompt);inputs.put("duration",duration);inputs.put("style",style);inputs.put("gemini_model",geminiModel);
                 JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
                 ApiResponse dispatch=api("POST",API+"/actions/workflows/story-assist.yml/dispatches",token,payload.toString());
                 if(dispatch.code!=204)throw new Exception("Gemini story workflow dispatch failed (HTTP "+dispatch.code+"): "+dispatch.body);
@@ -609,12 +610,13 @@ public class MainActivity extends Activity {
         if(prompt.isEmpty())return;
         final String requestId=UUID.randomUUID().toString().replace("-","").substring(0,12);
         final String projectJson=buildProject().toString();
+        final String geminiModel=getSelectedGeminiModel();
         if(projectJson.length()>45000){setStatus("Project context is too large for Gemini. Shorten the project notes and try again.");return;}
         setBusy(true);setStatus("Gemini Master AI is reviewing your command and current project…");
         generationDialog=new android.app.ProgressDialog(this);generationDialog.setTitle("G.I KO KO  /  GEMINI MASTER AI");generationDialog.setMessage("Securely sending the command to Gemini through GitHub Actions…");generationDialog.setIndeterminate(true);generationDialog.setCancelable(false);generationDialog.show();
         new Thread(()->{
             try{
-                JSONObject inputs=new JSONObject();inputs.put("request_id",requestId);inputs.put("prompt",prompt);inputs.put("project_json",projectJson);inputs.put("gemini_model",getSelectedGeminiModel());
+                JSONObject inputs=new JSONObject();inputs.put("request_id",requestId);inputs.put("prompt",prompt);inputs.put("project_json",projectJson);inputs.put("gemini_model",geminiModel);
                 JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
                 ApiResponse dispatched=api("POST",API+"/actions/workflows/studio-agent.yml/dispatches",token,payload.toString());
                 if(dispatched.code!=204)throw new Exception("Gemini Master AI dispatch failed (HTTP "+dispatched.code+"): "+dispatched.body);
@@ -883,6 +885,7 @@ public class MainActivity extends Activity {
         final String duration;try{duration=getDurationMinutes();}catch(IllegalArgumentException e){setStatus(e.getMessage());return;}
         final String resolution=resolutionSpinner.getSelectedItem().toString();
         final String requestId=UUID.randomUUID().toString().replace("-","").substring(0,12);
+        final String geminiModel=getSelectedGeminiModel();
         prefs().edit().putString("last_request_id",requestId).apply();
         final String projectJson=buildProject().toString();
         JSONObject projectCheck=buildProject();
@@ -895,7 +898,7 @@ public class MainActivity extends Activity {
                 JSONObject inputs=new JSONObject();inputs.put("style",style);inputs.put("duration",duration);inputs.put("resolution",resolution);inputs.put("request_id",requestId);
                 inputs.put("aspect_ratio",aspectRatioSpinner.getSelectedItem().toString());
                 inputs.put("fps",frameRateSpinner.getSelectedItem().toString());
-                inputs.put("project_json",projectJson);inputs.put("gemini_model",getSelectedGeminiModel());
+                inputs.put("project_json",projectJson);inputs.put("gemini_model",geminiModel);
                 JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
                 ApiResponse dispatched=api("POST",API+"/actions/workflows/"+WORKFLOW+"/dispatches",token,payload.toString());
                 if(dispatched.code!=204)throw new Exception("Workflow dispatch failed (HTTP "+dispatched.code+"): "+dispatched.body);
