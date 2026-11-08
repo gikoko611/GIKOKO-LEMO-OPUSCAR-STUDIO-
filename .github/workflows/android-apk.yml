@@ -96,9 +96,10 @@ jobs:
         run: |
           set -euo pipefail
           echo "=== Compiled Java classes ==="
-          find app/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes -type f -name '*.class' -printf '%p %s bytes\\n' 2>/dev/null | head -80 || true
+          find app/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes -type f -name '*.class' -print 2>/dev/null | head -80 | while IFS= read -r f; do echo "$f $(stat -c%s "$f") bytes"; done || true
           echo "=== DEX intermediate files ==="
-          find app/build/intermediates -type f \\( -name '*.dex' -o -name '*.jar' \\) -printf '%p %s bytes\\n' 2>/dev/null | grep -E 'dex|javac|project' | head -120 || true
+          find app/build/intermediates -type f -name '*.dex' -print 2>/dev/null | while IFS= read -r f; do echo "DEX: $f $(stat -c%s "$f") bytes"; done || true
+          find app/build/intermediates -type f -name '*.jar' -print 2>/dev/null | grep -E 'dex|javac|project' | head -80 | while IFS= read -r f; do echo "JAR: $f $(stat -c%s "$f") bytes"; unzip -l "$f" | head -30; done || true
           echo "=== APK entries ==="
           unzip -l app/build/outputs/apk/debug/app-debug.apk 2>/dev/null | head -100 || true
           echo "=== Gradle dex task inputs ==="
