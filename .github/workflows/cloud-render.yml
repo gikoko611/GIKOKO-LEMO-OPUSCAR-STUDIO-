@@ -158,6 +158,10 @@ jobs:
           test -s output/video_silent.mp4
 
       - name: Generate bilingual voice, music, SFX and Myanmar subtitles
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_TTS_MODEL: gemini-3.8-flash-tts
+          TTS_PROVIDER: auto
         run: |
           python scripts/audio_pipeline.py \
             --project project.json \
