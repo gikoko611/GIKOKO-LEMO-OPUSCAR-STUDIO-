@@ -61,7 +61,19 @@ def main():
     style=str(p.get("style","cartoon2d")).lower(); palette=palettes.get(style,palettes["cartoon2d"])
     out=Path(a.out); out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="gikoko-render-") as td:
-        w=Path(td); mascot=w/"mascot.png"; make_mascot(mascot)
+        w=Path(td); mascot=w/"mascot.png"
+        reference_data=str(p.get("character_reference_base64") or "").strip()
+        if reference_data:
+            try:
+                reference=Image.open(io.BytesIO(base64.b64decode(reference_data,validate=True))).convert("RGBA")
+                reference.thumbnail((max(128,width//2),max(128,height//2)),Image.LANCZOS)
+                reference.save(mascot,"PNG",optimize=True)
+                print("CHARACTER_IMAGE: uploaded reference image selected for animation.",flush=True)
+            except Exception as exc:
+                print("CHARACTER_IMAGE: reference image could not be decoded; using fallback mascot: "+str(exc),flush=True)
+                make_mascot(mascot)
+        else:
+            make_mascot(mascot)
         logo_path=None
         logo_data=str(p.get("watermark_logo_base64") or "").strip()
         if logo_data:
@@ -75,14 +87,20 @@ def main():
         regular=font_path("Noto Sans","/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
         myanmar=font_path("Noto Sans Myanmar",regular)
         scene_index=min(len(plan)-1,int((offset/max(1,total))*len(plan))) if plan else 0
-        motion=str(plan[scene_index].get("motion","float")) if plan else "float"
+        motion=str(p.get("character_motion") or (plan[scene_index].get("motion","float") if plan else "float"))
+        if motion not in ("float","bounce","slide","pulse","still"): motion="float"
         if motion=="bounce": mascot_y="H*0.38-h/2+22*abs(sin(2*PI*t/1.4))"
         elif motion=="slide": mascot_y="H*0.38-h/2";
         elif motion=="pulse": mascot_y="H*0.38-h/2+8*sin(2*PI*t/1.0)"
         elif motion=="still": mascot_y="H*0.38-h/2"
         else: mascot_y="H*0.38-h/2+10*sin(2*PI*t/2.5)"
         mascot_x="(W-w)/2+55*sin(2*PI*t/5)" if motion!="slide" else "(W-w)/2-70+140*min(1,t/4)"
-        filters=[f"[0:v][1:v]overlay=x='{mascot_x}':y='{mascot_y}':shortest=1[base]"]
+        max_character_width=max(96,int(width*0.44))
+        max_character_height=max(96,int(height*0.50))
+        filters=[
+            f"[1:v]scale=w={max_character_width}:h={max_character_height}:force_original_aspect_ratio=decrease[character]",
+            f"[0:v][character]overlay=x='{mascot_x}':y='{mascot_y}':shortest=1[base]"
+        ]
         chain="base"
         if logo_path:
             filters.append("[base][2:v]overlay=x=W-w-32:y=H-h-32:format=auto[logo]")
