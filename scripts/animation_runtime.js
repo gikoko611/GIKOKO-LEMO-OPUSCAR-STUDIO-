@@ -9,7 +9,7 @@ const project = JSON.parse(fs.readFileSync(input, "utf8"));
 const source = String(project.animation_code || "").trim();
 const plan = [];
 const allowedMotion = new Set(["float", "bounce", "slide", "pulse", "still"]);
-const api = Object.freeze({
+const api = {
   scene(value) {
     if (plan.length >= 60) throw new Error("Maximum 60 generated scenes allowed");
     if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("api.scene expects an object");
@@ -22,7 +22,7 @@ const api = Object.freeze({
     const motion = allowedMotion.has(value.motion) ? value.motion : "float";
     plan.push({title, description, background, duration, motion});
   }
-});
+};
 Object.setPrototypeOf(api.scene, null);
 Object.freeze(api.scene);
 Object.setPrototypeOf(api, null);
