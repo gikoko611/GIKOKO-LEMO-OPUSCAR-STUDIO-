@@ -1,9 +1,9 @@
 # G.I KO KO ViD Gen — Latest APK Build
-- Status: success
+- Status: cancelled
 - Workflow: Build G.I Ko Ko ViD Gen APK
-- Run: #91
-- Run ID: 42442070070
-- Commit: 1ace3f5961cf3cbcc120bf9ed55aa120e9191d3f
+- Run: #94
+- Run ID: 42442167448
+- Commit: 65d69839856315c6bed82f675378eea8dc474a7b
 - APK artifact: GI-KO-KO-VID-GEN-APK
-- Run details: https://github.com/gikoko611/GIKOKO-LEMO-OPUSCAR-STUDIO-/actions/runs/42442070070
+- Run details: https://github.com/gikoko611/GIKOKO-LEMO-OPUSCAR-STUDIO-/actions/runs/42442167448
 - Release: https://github.com/gikoko611/GIKOKO-LEMO-OPUSCAR-STUDIO-/releases/tag/latest
