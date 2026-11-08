@@ -145,7 +145,7 @@ public class MainActivity extends Activity {
 
         LinearLayout chat=card(root);heading(chat,"01  /  AI DIRECTOR CHAT","Describe your film naturally. AI prepares the storyboard; cloud rendering creates the MP4.");
         chatTranscript=new TextView(this);chatTranscript.setTextColor(0xffd8eaf0);chatTranscript.setTextSize(13);chatTranscript.setLineSpacing(dp(3),1f);
-        chatTranscript.setPadding(dp(13),dp(12),dp(13),dp(12));chatTranscript.setBackground(shape(0xff0a1722,0xff1d5360,14));chatTranscript.setMinHeight(dp(90));
+        chatTranscript.setPadding(dp(13),dp(12),dp(13),dp(12));chatTranscript.setBackground(shape(0xff0a1722,0xff1d5360,14));chatTranscript.setMinHeight(dp(90));chatTranscript.setMaxHeight(dp(220));chatTranscript.setVerticalScrollBarEnabled(true);chatTranscript.setMovementMethod(new android.text.method.ScrollingMovementMethod());
         chatTranscript.setText(prefs().getString("chat_history","G.I KO KO AI DIRECTOR\nTell me what kind of story you want to make."));
         chat.addView(chatTranscript,new LinearLayout.LayoutParams(-1,-2));
         TextView ql=label("QUICK IDEAS",10);ql.setTextColor(0xff6fe9d0);chat.addView(ql);
@@ -193,7 +193,7 @@ public class MainActivity extends Activity {
         buildSettingsPanel();restoreProject();
     }
     private void appendChatMessage(String who,String message){
-        try{String old=prefs().getString("chat_history","G.I KO KO AI DIRECTOR");String next=old+"\n\n"+who+"\n"+message;if(next.length()>9000)next=next.substring(next.length()-9000);prefs().edit().putString("chat_history",next).apply();if(chatTranscript!=null)chatTranscript.setText(next);}catch(Exception ignored){}
+        try{String old=prefs().getString("chat_history","G.I KO KO AI DIRECTOR");String next=old+"\n\n"+who+"\n"+message;if(next.length()>9000)next=next.substring(next.length()-9000);prefs().edit().putString("chat_history",next).apply();if(chatTranscript!=null){chatTranscript.setText(next);chatTranscript.post(()->chatTranscript.scrollTo(0,chatTranscript.getLayout()==null?0:chatTranscript.getLayout().getLineTop(chatTranscript.getLineCount())-chatTranscript.getHeight()));}}catch(Exception ignored){}
     }
 
     private void buildSettingsPanel(){
