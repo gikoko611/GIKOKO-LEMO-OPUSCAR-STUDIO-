@@ -7,7 +7,7 @@
 ### 0.2.0 Professional Studio Upgrade
 - Three selectable premium themes in Settings: NEBULA PRISM, OBSIDIAN LUX and AURORA GLASS, with dynamic 3D-style bordered cards.
 - Cloud Render supports 16:9, 9:16, 1:1 and 4:5 output ratios plus 24/30/60 FPS selection.
-- Local Device Render creates a short, silent H.264 MP4 preview on-device (1–30 seconds) using Android MediaCodec; it is a lightweight preview renderer, not a replacement for full cloud rendering or cloud voice/music/subtitle mastering.
+- Local Device Render creates a short, silent H.264 MP4 preview on-device (1–15 seconds) using Android MediaCodec; it is a lightweight preview renderer, not a replacement for full cloud rendering or cloud voice/music/subtitle mastering.
 - Local output is saved in Downloads. For full-length projects, voice-over, generated music, SFX and MP4 subtitle muxing, use Cloud Render.
 - Local rendering depends on the handset's H.264 encoder; if unsupported or memory-constrained, switch to Cloud Render.
 
