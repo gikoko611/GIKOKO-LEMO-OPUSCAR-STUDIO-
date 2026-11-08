@@ -4,7 +4,10 @@
 
 ## Studio modules
 
-### 0.2.0 Professional Studio Upgrade
+### 0.3.0 Studio Toolkit Upgrade
+- English-first studio interface with ten custom vector feature icons and a neon cyber visual system.
+- Ten built-in starter templates: Myanmar palace comedy, folk tale, action adventure, rural mystery, kids fable, travel documentary, product showcase, motivational short, music video and movie recap.
+- Ten illustrated tools: Starter Templates, Character Lab, Dialogue Desk, Subtitle Preview, Audio Lab, Cloud Queue, Project Library, Brand Kit, Format Presets and Diagnostics.
 - Three selectable premium themes in Settings: NEBULA PRISM, OBSIDIAN LUX and AURORA GLASS, with dynamic 3D-style bordered cards.
 - Cloud Render supports 16:9, 9:16, 1:1 and 4:5 output ratios plus 24/30/60 FPS selection.
 - The normal user interface is Cloud Render-first. Local Device Render remains in the codebase but is temporarily hidden from the user interface.
@@ -34,7 +37,7 @@
 - Automatic Edge TTS fallback: English `en-US-GuyNeural`, Myanmar `my-MM-ThihaNeural`, when Gemini is not configured or its request fails.
 - Bilingual voice option.
 - Procedurally synthesized background music and scene accents.
-- Myanmar SRT subtitles embedded as an MP4 soft-subtitle track and included as a separate artifact.
+- English + Myanmar bilingual SRT subtitles (stacked in the same caption cue), embedded as an MP4 soft-subtitle track and included as a separate artifact.
 - Both Gemini TTS and Edge TTS require network access. Gemini TTS may be Preview/quota-limited; Burmese is listed for Gemini 3.8 Flash TTS, but not Flash-Lite TTS.
 
 ### 4. Cloud Render Queue
@@ -71,6 +74,12 @@
 5. The same `GEMINI_API_KEY` secret is used by Cloud Render for Gemini TTS and by the AI render-repair workflow. The key is never embedded in the APK.
 
 Advanced OpenAI-compatible provider settings are temporarily hidden from the standard UI. Existing saved provider settings are preserved for later re-enabling.
+
+## Visual assets and accessibility
+- Ten lightweight, hand-authored Android Vector Drawable icons are bundled in `app/src/main/res/drawable/`; no network icon loading or heavyweight icon font is required.
+- The app UI is English-first. Myanmar text is reserved for the user dialogue and the bilingual subtitle output.
+- Interactive controls target at least 48dp where practical and use a compact two-column tool grid for phone screens.
+- Android vector resources are original project artwork; no third-party illustration pack is redistributed. Google Material icon guidance is used as a design reference only.
 
 ## Build APK
 Open GitHub Actions → Build G.I Ko Ko ViD Gen APK → Run workflow. Download artifact GI-KO-KO-VID-GEN-APK and install app-debug.apk on Android 10 / ARMv7.
