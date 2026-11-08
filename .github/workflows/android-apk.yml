@@ -122,14 +122,35 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Publish APK GitHub Release
+      - name: Update the single Latest APK Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
-          TAG="apk-build-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" "$APK" \
-            --title "G.I Ko Ko ViD Gen APK — Build #${GITHUB_RUN_NUMBER}" \
-            --notes "Automated G.I Ko Ko ViD Gen Android APK build. This is a debug-signed test APK; install for device testing. Build commit: ${GITHUB_SHA}" \
-            --prerelease
+          TAG="latest"
+          TITLE="G.I KO KO ViD Gen — Latest"
+          NOTES="Latest verified G.I KO KO ViD Gen APK. Updated automatically after each successful build. Build #${GITHUB_RUN_NUMBER}. Commit: ${GITHUB_SHA}."
+
+          # Create the stable release if it does not exist yet.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Updating existing stable release: $TAG"
+          else
+            gh release create "$TAG" --title "$TITLE" --notes "$NOTES" --prerelease
+          fi
+
+          # Replace the APK asset in-place; keep the release URL and tag stable.
+          gh release upload "$TAG" "$APK" --clobber
+          gh release edit "$TAG" --title "$TITLE" --notes "$NOTES" --prerelease
+
+          # Remove every other old release and its associated tag.
+          gh release list --limit 1000 --json tagName --jq '.[].tagName' | while IFS= read -r old_tag; do
+            [ -n "$old_tag" ] || continue
+            if [ "$old_tag" != "$TAG" ]; then
+              echo "Deleting old release and tag: $old_tag"
+              gh release delete "$old_tag" --yes
+            fi
+          done
+
+          echo "Single stable release updated:"
+          gh release view "$TAG" --json name,tagName,url,assets
