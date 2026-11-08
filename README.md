@@ -51,7 +51,7 @@
 ## Gemini character reference setup
 1. Reuse the existing repository secret `GEMINI_API_KEY`; no Omni or Veo API key is needed.
 2. The cloud workflow sends the compressed uploaded image to Gemini Flash for visual description only. If Gemini analysis is unavailable, the uploaded image still animates with the selected free motion preset.
-3. The image is carried inside the private workflow input and is not committed as a repository image file. Keep the GitHub repository private if your project prompts and workflow inputs are private.
+3. The image is carried in the GitHub Actions workflow input and is not committed as a repository image file. Workflow-run visibility follows the repository's GitHub visibility and access settings.
 
 ## Gemini TTS setup
 1. Open the repository Settings → Secrets and variables → Actions.
