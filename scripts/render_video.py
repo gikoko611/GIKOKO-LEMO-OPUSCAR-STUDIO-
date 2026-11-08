@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Self-contained procedural video renderer for G.I KO KO LEMO OPUSCAR Studio."""
-import argparse, json, subprocess, tempfile, textwrap
+import argparse, base64, io, json, subprocess, tempfile, textwrap
 from pathlib import Path
 from PIL import Image, ImageDraw
 
@@ -62,6 +62,16 @@ def main():
     out=Path(a.out); out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="gikoko-render-") as td:
         w=Path(td); mascot=w/"mascot.png"; make_mascot(mascot)
+        logo_path=None
+        logo_data=str(p.get("watermark_logo_base64") or "").strip()
+        if logo_data:
+            try:
+                logo_path=w/"watermark-logo.png"
+                logo=Image.open(io.BytesIO(base64.b64decode(logo_data))).convert("RGBA")
+                logo.thumbnail((max(64,width//7),max(64,height//7)))
+                logo.save(logo_path)
+            except Exception as exc:
+                print("Watermark logo skipped:",exc,flush=True); logo_path=None
         regular=font_path("Noto Sans","/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
         myanmar=font_path("Noto Sans Myanmar",regular)
         scene_index=min(len(plan)-1,int((offset/max(1,total))*len(plan))) if plan else 0
@@ -74,6 +84,9 @@ def main():
         mascot_x="(W-w)/2+55*sin(2*PI*t/5)" if motion!="slide" else "(W-w)/2-70+140*min(1,t/4)"
         filters=[f"[0:v][1:v]overlay=x='{mascot_x}':y='{mascot_y}':shortest=1[base]"]
         chain="base"
+        if logo_path:
+            filters.append("[base][2:v]overlay=x=W-w-32:y=H-h-32:format=auto[logo]")
+            chain="logo"
         def draw(name,value,y,size,font=regular,color="0xfff0c2",box="0x000000@0.42",enable=None):
             nonlocal chain
             file=write_text(w,name,value); nxt=f"v{len(filters)}"
@@ -114,9 +127,11 @@ def main():
             bg="0x"+raw_bg.lstrip("#") if len(raw_bg)==7 and raw_bg.startswith("#") else palette[scene_index%len(palette)]
         else:
             bg=palette[(offset//max(1,int(span)))%len(palette)]
+        image_inputs=["-loop","1","-framerate",str(a.fps),"-i",str(mascot)]
+        if logo_path: image_inputs += ["-i",str(logo_path)]
         run(["ffmpeg","-y","-hide_banner","-loglevel","error",
              "-f","lavfi","-i",f"color=c={bg}:s={width}x{height}:r={a.fps}:d={duration}",
-             "-loop","1","-framerate","24","-i",str(mascot),
+             *image_inputs,
              "-filter_complex",";".join(filters),"-map","[vout]","-an","-t",str(duration),
              "-r",str(a.fps),"-c:v","libx264","-preset","ultrafast","-crf","27","-pix_fmt","yuv420p",
              "-movflags","+faststart","-threads","2",str(out)])
