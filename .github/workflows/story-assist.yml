@@ -13,10 +13,10 @@ on:
         required: true
         type: string
       duration:
-        description: Target duration in minutes
+        description: Target duration in whole minutes (1-180)
         required: true
-        type: choice
-        options: ["1", "2", "3", "5", "10", "30"]
+        type: string
+        default: "2"
       style:
         description: Visual style
         required: true
@@ -51,6 +51,7 @@ jobs:
               raise SystemExit("GEMINI_API_KEY repository secret is missing.")
           prompt=os.environ["STORY_PROMPT"]
           duration=os.environ["STORY_DURATION"]
+          if not duration.isdigit() or not 1 <= int(duration) <= 180: raise SystemExit("Duration must be a whole number from 1 to 180 minutes.")
           style=os.environ["STORY_STYLE"]
           instruction=f"""You are the G.I KO KO AI Director. Create a production-ready story for an Android-first cartoon/cinematic studio.
           User idea: {prompt}
@@ -62,7 +63,7 @@ jobs:
             "scenes":["scene 1 description","scene 2 description"],
             "dialogue":[{{"english":"English dialogue","myanmar":"မြန်မာဘာသာပြန်"}}]
           }}
-          For 1 minute create 4-6 scenes; 2 minutes 6-8 scenes; 3 minutes 8-10 scenes; 5 minutes 8-12 scenes; 10 minutes 12-18 scenes; 30 minutes 18-30 scenes. For Facebook mixed-content projects, use a compelling first-3-second hook, fast visual beats, a satisfying ending and natural bilingual dialogue. Avoid copyrighted characters, copied scripts and unlicensed music.
+          Duration must be a whole number from 1 to 180 minutes. Create enough scenes to cover the requested duration: approximately 3 scenes per minute, with a minimum of 4 and maximum of 60 scenes. Keep each scene visually actionable and pace dialogue to the target runtime. For Facebook mixed-content projects, use a compelling first-3-second hook, fast visual beats, a satisfying ending and natural bilingual dialogue. Avoid copyrighted characters, copied scripts and unlicensed music.
           Include at least 2 bilingual dialogue turns per scene where practical. Keep the same characters and continuity throughout.
           Do not include markdown fences, external URLs, animation code, or claims that footage is AI-generated."""
           body={"contents":[{"parts":[{"text":instruction}]}],"generationConfig":{"temperature":0.75,"responseMimeType":"application/json"}}
