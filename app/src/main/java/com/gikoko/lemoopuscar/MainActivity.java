@@ -221,12 +221,11 @@ public class MainActivity extends Activity {
         Button saveAi=button("SAVE AI PROVIDER");ai.addView(saveAi);saveAi.setOnClickListener(v->saveAiProvider());
         Button providers=button("◎  PROVIDER MANAGER");ai.addView(providers);providers.setOnClickListener(v->new ProviderManager(this).open());
 
-        LinearLayout output=card(panel);heading(output,"VIDEO & AUDIO","Keep advanced controls here, away from the main workspace");
+        LinearLayout output=card(panel);heading(output,"RENDER ENGINE","Choose on-device preview or full cloud production");
         TextView modeLabel=label("RENDER ENGINE",11);output.addView(modeLabel);
         renderModeSpinner=spinner(new String[]{"Cloud Render","Local Device Render"});output.addView(renderModeSpinner);
         setSpinnerValue(renderModeSpinner,prefs().getString("render_mode","Cloud Render"));
         renderModeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onNothingSelected(android.widget.AdapterView<?> p){} public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){prefs().edit().putString("render_mode",renderModeSpinner.getSelectedItem().toString()).apply();}});
-        localDurationSpinner=spinner(new String[]{"5","10","15","30"});output.addView(label("LOCAL CLIP DURATION (SECONDS) — MAX 30s",11));output.addView(localDurationSpinner);
         localDurationSpinner=spinner(new String[]{"5","10","15","30"});output.addView(label("LOCAL CLIP DURATION (SECONDS) — MAX 30s",11));output.addView(localDurationSpinner);
         TextView localNote=label("Local mode exports a silent preview MP4. Use Cloud mode for full-length audio, voice and subtitle mastering.",10);localNote.setTextColor(themeMuted);output.addView(localNote);
 
