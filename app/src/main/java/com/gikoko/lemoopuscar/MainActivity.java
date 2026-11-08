@@ -59,7 +59,7 @@ public class MainActivity extends Activity {
     private EditText watermarkInput;
     private String watermarkLogoBase64="";
     private android.app.ProgressDialog generationDialog;
-    private TextView renderCenterLog;
+    private TextView renderCenterLog,chatTranscript;
     private TextView status;
     private Button startButton,saveButton,checkButton,downloadButton,retryButton;
     private Spinner voiceSpinner;
@@ -122,120 +122,94 @@ public class MainActivity extends Activity {
         TextView t=label(text,16);t.setTextColor(themeAccent);t.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));box.addView(t);
         if(hint!=null&&!hint.isEmpty()){TextView h=label(hint,11);h.setTextColor(0xff8daab8);h.setPadding(0,0,0,dp(7));box.addView(h);}
     }
+
     private void buildUi(){
         getWindow().setStatusBarColor(0xff07111b);getWindow().setNavigationBarColor(0xff07111b);
         FrameLayout shell=new FrameLayout(this);
-        shell.setBackground(new android.graphics.drawable.GradientDrawable(
-            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-            new int[]{themeBg,themeCard,themeBg}));
-        CyberGridView grid=new CyberGridView(this);shell.addView(grid,new FrameLayout.LayoutParams(-1,-1));
+        shell.setBackground(new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,new int[]{0xff07111b,0xff0b1d2a,0xff07111b}));
+        shell.addView(new CyberGridView(this),new FrameLayout.LayoutParams(-1,-1));
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);
-        LinearLayout root=column();root.setPadding(dp(18),dp(14),dp(18),dp(30));scroll.addView(root);
-        shell.addView(scroll);setContentView(shell);
+        LinearLayout root=column();root.setPadding(dp(16),dp(12),dp(16),dp(28));scroll.addView(root);shell.addView(scroll);setContentView(shell);
 
-        FrameLayout hero=new FrameLayout(this);hero.setBackground(new android.graphics.drawable.GradientDrawable(
-            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-            new int[]{themeButtonA,themeCard,themeBg}));
-        hero.setElevation(dp(8));hero.setPadding(dp(18),dp(20),dp(18),dp(18));
-        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(190));hp.bottomMargin=dp(16);root.addView(hero,hp);
-        CyberGridView heroGrid=new CyberGridView(this);hero.addView(heroGrid,new FrameLayout.LayoutParams(-1,-1));
-        LinearLayout brand=column();brand.setGravity(Gravity.CENTER);FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams(-1,-1);hero.addView(brand,bp);
-        ImageView logo=new ImageView(this);logo.setImageResource(R.drawable.ic_launcher);
-        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);logo.setElevation(dp(12));
-        brand.addView(logo,new LinearLayout.LayoutParams(dp(88),dp(88)));
-        android.animation.ValueAnimator pulse=android.animation.ValueAnimator.ofFloat(0.96f,1.045f);
-        pulse.setDuration(1900);pulse.setRepeatCount(android.animation.ValueAnimator.INFINITE);pulse.setRepeatMode(android.animation.ValueAnimator.REVERSE);
-        pulse.addUpdateListener(a->{float v=(Float)a.getAnimatedValue();logo.setScaleX(v);logo.setScaleY(v);logo.setRotationY((v-1f)*220f);});pulse.start();
-        TextView appName=label("KO KO  •  ViD GEN",15);appName.setGravity(Gravity.CENTER);appName.setTextColor(0xffe9fbff);
-        appName.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));brand.addView(appName);
-        TextView credit=label("3D CREATIVE STUDIO   /   POWERED BY I KO KO",9);credit.setGravity(Gravity.CENTER);
-        credit.setTextColor(0xff62e8d0);brand.addView(credit);
+        LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);top.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams tlp=new LinearLayout.LayoutParams(-1,dp(54));tlp.bottomMargin=dp(14);root.addView(top,tlp);
+        ImageView logo=new ImageView(this);logo.setImageResource(R.drawable.ic_launcher);logo.setScaleType(ImageView.ScaleType.FIT_CENTER);top.addView(logo,new LinearLayout.LayoutParams(dp(46),dp(46)));
+        LinearLayout brand=column();LinearLayout.LayoutParams blp=new LinearLayout.LayoutParams(0,-2,1);blp.leftMargin=dp(10);top.addView(brand,blp);
+        TextView name=label("G.I KO KO  •  ViD GEN",16);name.setTextColor(0xfff2fbff);name.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));brand.addView(name);
+        TextView sub=label("CREATIVE PRODUCTION STUDIO  /  POWERED BY I KO KO",9);sub.setTextColor(0xff54e5c2);brand.addView(sub);
+        Button settings=button("⚙");top.addView(settings,new LinearLayout.LayoutParams(dp(52),dp(46)));settings.setOnClickListener(v->openSettings());
 
-        LinearLayout quick=card(root);heading(quick,"STUDIO CONTROL","Your creative workspace");
-        TextView intro=label("Create animated stories, generate scenes and render your video from one clean workspace.",12);
-        intro.setTextColor(0xffa9c4d1);quick.addView(intro);
-        LinearLayout quickRow=new LinearLayout(this);quickRow.setOrientation(LinearLayout.HORIZONTAL);quick.addView(quickRow);
-        Button settings=button("⚙  SETTINGS");quickRow.addView(settings,new LinearLayout.LayoutParams(0,dp(48),1));
-        Button assist=button("✦  AI STORY ASSIST");LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(0,dp(48),1);ap.leftMargin=dp(8);quickRow.addView(assist,ap);
-        settings.setOnClickListener(v->openSettings());assist.setOnClickListener(v->assistStory());
+        LinearLayout hero=card(root);hero.setBackground(new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,new int[]{0xff123c4b,0xff10283a,0xff101a2c}));
+        heading(hero,"YOUR STORY. YOUR STUDIO.","Plan a story, direct the scenes, and export a finished MP4.");
+        TextView cloud=label("●  CLOUD RENDER ACTIVE     •     480p / 720p",10);cloud.setTextColor(0xff5cf2c5);hero.addView(cloud);
 
-        LinearLayout project=card(root);heading(project,"01  •  PROJECT BUILDER","Start with a title and a clear creative idea");
-        titleInput=edit("The Golden Kingdom","Film title",false);project.addView(titleInput);
-        promptInput=edit("Write a funny adventure in an ancient Myanmar royal palace. Include an unexpected action-comedy twist.","Describe your film idea / prompt",false);
-        promptInput.setMinLines(3);project.addView(promptInput);
-        characterInput=edit("Main character: a clever but clumsy royal guard. Keep costume, face, colors and personality consistent in every scene.","Character Bible — consistent look and personality",false);
-        characterInput.setMinLines(3);project.addView(characterInput);
-        sceneInput=edit("Palace courtyard — introduce the guard\nThrone room — a suspicious royal order\nPalace kitchen — comic chase\nRoyal hall — funny reveal","Scene outline — one scene per line",false);
-        sceneInput.setMinLines(4);project.addView(sceneInput);
-        dialogueInput=edit("Guard: I have everything under control. | အားလုံးကို ကျွန်တော် ထိန်းချုပ်ထားပါတယ်။\nKing: Then why is the palace on fire? | ဒါဆို နန်းတော်က ဘာလို့ မီးလောင်နေတာလဲ။","Dialogue — English | Myanmar per line",false);
-        dialogueInput.setMinLines(4);project.addView(dialogueInput);
-        LinearLayout config=card(root);heading(config,"VIDEO CONFIGURATION","Set duration, quality, framing and audio before generating");
+        LinearLayout chat=card(root);heading(chat,"01  /  AI DIRECTOR CHAT","Describe your film naturally. AI prepares the storyboard; cloud rendering creates the MP4.");
+        chatTranscript=new TextView(this);chatTranscript.setTextColor(0xffd8eaf0);chatTranscript.setTextSize(13);chatTranscript.setLineSpacing(dp(3),1f);
+        chatTranscript.setPadding(dp(13),dp(12),dp(13),dp(12));chatTranscript.setBackground(shape(0xff0a1722,0xff1d5360,14));chatTranscript.setMinHeight(dp(90));
+        chatTranscript.setText(prefs().getString("chat_history","G.I KO KO AI DIRECTOR\nTell me what kind of story you want to make."));
+        chat.addView(chatTranscript,new LinearLayout.LayoutParams(-1,-2));
+        TextView ql=label("QUICK IDEAS",10);ql.setTextColor(0xff6fe9d0);chat.addView(ql);
+        LinearLayout quick=new LinearLayout(this);quick.setOrientation(LinearLayout.HORIZONTAL);chat.addView(quick);
+        String[] ideas={"Myanmar comedy","Action adventure","Historical cartoon"};
+        for(String idea:ideas){Button q=button(idea);q.setTextSize(10);LinearLayout.LayoutParams qp=new LinearLayout.LayoutParams(0,dp(42),1);qp.rightMargin=dp(5);quick.addView(q,qp);q.setOnClickListener(v->promptInput.setText("Create a "+idea.toLowerCase(Locale.US)+" story with consistent characters, exciting scenes and a memorable ending."));}
+        promptInput=edit("","Message your AI Director…",false);promptInput.setMinLines(3);promptInput.setMaxLines(6);promptInput.setBackground(shape(0xff0a1722,0xff247e7b,16));chat.addView(promptInput);
+        Button send=button("➤  SEND TO AI DIRECTOR");chat.addView(send,new LinearLayout.LayoutParams(-1,dp(50)));
+        send.setOnClickListener(v->{String m=promptInput.getText().toString().trim();if(m.isEmpty()){setStatus("Write a story idea first.");return;}appendChatMessage("YOU",m);assistStory();});
+
+        LinearLayout project=card(root);heading(project,"02  /  PROJECT DETAILS","Keep the title, character identity and scene continuity in one place.");
+        titleInput=edit("The Golden Kingdom","Project title",false);project.addView(titleInput);
+        characterInput=edit("Main character: a clever but clumsy royal guard. Keep costume, face, colors and personality consistent in every scene.","Character Bible — consistent look and personality",false);characterInput.setMinLines(3);project.addView(characterInput);
+        sceneInput=edit("Palace courtyard — introduce the guard\nThrone room — a suspicious royal order\nPalace kitchen — comic chase\nRoyal hall — funny reveal","Scene outline — one scene per line",false);sceneInput.setMinLines(4);project.addView(sceneInput);
+        dialogueInput=edit("Guard: I have everything under control. | အားလုံးကို ကျွန်တော် ထိန်းချုပ်ထားပါတယ်။\nKing: Then why is the palace on fire? | ဒါဆို နန်းတော်က ဘာလို့ မီးလောင်နေတာလဲ။","Dialogue — English | Myanmar per line",false);dialogueInput.setMinLines(4);project.addView(dialogueInput);
+        LinearLayout pa=new LinearLayout(this);pa.setOrientation(LinearLayout.HORIZONTAL);project.addView(pa);
+        Button save=button("▣  SAVE DRAFT");pa.addView(save,new LinearLayout.LayoutParams(0,dp(46),1));save.setOnClickListener(v->saveProject());
+        Button library=button("▤  PROJECTS");LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(46),1);lp.leftMargin=dp(8);pa.addView(library,lp);library.setOnClickListener(v->openProjectLibrary());
+
+        LinearLayout config=card(root);heading(config,"03  /  PRODUCTION SETTINGS","Choose output format, quality, voice and finishing options.");
         config.addView(label("VISUAL STYLE",11));styleSpinner=spinner(new String[]{"hybrid","cartoon2d","cartoon3d","cinematic"});config.addView(styleSpinner);
-        config.addView(label("CLOUD FILM LENGTH (MINUTES)",11));durationSpinner=spinner(new String[]{"1","5","10","30"});config.addView(durationSpinner);
-        config.addView(label("OUTPUT RESOLUTION",11));resolutionSpinner=spinner(new String[]{"480p","720p"});config.addView(resolutionSpinner);
-        config.addView(label("VIDEO VIEW SIZE / ASPECT RATIO",11));aspectRatioSpinner=spinner(new String[]{"16:9","9:16","1:1","4:5"});config.addView(aspectRatioSpinner);
+        config.addView(label("VIDEO LENGTH  •  MINUTES",11));durationSpinner=spinner(new String[]{"1","5","10","30"});config.addView(durationSpinner);
+        config.addView(label("OUTPUT QUALITY",11));resolutionSpinner=spinner(new String[]{"480p","720p"});config.addView(resolutionSpinner);
+        config.addView(label("ASPECT RATIO",11));aspectRatioSpinner=spinner(new String[]{"16:9","9:16","1:1","4:5"});config.addView(aspectRatioSpinner);
         config.addView(label("FRAME RATE",11));frameRateSpinner=spinner(new String[]{"24","30","60"});config.addView(frameRateSpinner);
         config.addView(label("VOICE-OVER",11));voiceSpinner=spinner(new String[]{"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"});config.addView(voiceSpinner);
         musicCheck=new CheckBox(this);musicCheck.setText("Background music");musicCheck.setTextColor(themeText);musicCheck.setChecked(true);config.addView(musicCheck);
         sfxCheck=new CheckBox(this);sfxCheck.setText("Sound effects");sfxCheck.setTextColor(themeText);sfxCheck.setChecked(true);config.addView(sfxCheck);
         subtitleCheck=new CheckBox(this);subtitleCheck.setText("Myanmar subtitle track");subtitleCheck.setTextColor(themeText);subtitleCheck.setChecked(true);config.addView(subtitleCheck);
-        watermarkInput=edit("POWERED BY I KO KO","Watermark text",false);config.addView(label("WATERMARK / BRANDING",11));config.addView(watermarkInput);
-        Button addLogo=button("＋  ADD MEDIA / WATERMARK LOGO");project.addView(addLogo);addLogo.setOnClickListener(v->pickWatermarkLogo());
-        Button saveProject=button("▣  SAVE PROJECT");project.addView(saveProject);saveProject.setOnClickListener(v->saveProject());
-        Button library=button("▤  PROJECT LIBRARY");project.addView(library);library.setOnClickListener(v->openProjectLibrary());
+        watermarkInput=edit("POWERED BY I KO KO","Watermark text",false);config.addView(watermarkInput);
+        Button addLogo=button("＋  ADD BRAND LOGO");config.addView(addLogo);addLogo.setOnClickListener(v->pickWatermarkLogo());
 
-        LinearLayout render=card(root);heading(render,"02  •  RENDER STUDIO","Cloud rendering • MP4 output");
-        startButton=button("▶   START VIDEO RENDER");render.addView(startButton);
+        LinearLayout render=card(root);heading(render,"04  /  CLOUD RENDER","GitHub Actions renders your project and exports a downloadable MP4.");
+        startButton=button("▶   START CLOUD RENDER");render.addView(startButton,new LinearLayout.LayoutParams(-1,dp(54)));
         startButton.setOnClickListener(v->{if(ensureStoragePermission())startRender();else{pendingStart=true;requestStoragePermission();}});
-        LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);rp.topMargin=dp(8);render.addView(actions,rp);
+        LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);LinearLayout.LayoutParams al=new LinearLayout.LayoutParams(-1,-2);al.topMargin=dp(9);render.addView(actions,al);
         retryButton=button("↻ RETRY");actions.addView(retryButton,new LinearLayout.LayoutParams(0,dp(46),1));retryButton.setOnClickListener(v->retryFailedRender());
-        checkButton=button("◉ STATUS");LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(46),1);cp.leftMargin=dp(7);actions.addView(checkButton,cp);checkButton.setOnClickListener(v->checkLastRun());
-        downloadButton=button("↓ MP4");LinearLayout.LayoutParams dp2=new LinearLayout.LayoutParams(0,dp(46),1);dp2.leftMargin=dp(7);actions.addView(downloadButton,dp2);downloadButton.setOnClickListener(v->downloadLastRun());
-        Button renderCenter=button("▣  OPEN RENDER CENTER / LOGS");LinearLayout.LayoutParams rclp=new LinearLayout.LayoutParams(-1,dp(46));rclp.topMargin=dp(8);render.addView(renderCenter,rclp);renderCenter.setOnClickListener(v->openRenderCenter());
+        checkButton=button("◉ STATUS");LinearLayout.LayoutParams cl=new LinearLayout.LayoutParams(0,dp(46),1);cl.leftMargin=dp(7);actions.addView(checkButton,cl);checkButton.setOnClickListener(v->checkLastRun());
+        downloadButton=button("↓ MP4");LinearLayout.LayoutParams dl=new LinearLayout.LayoutParams(0,dp(46),1);dl.leftMargin=dp(7);actions.addView(downloadButton,dl);downloadButton.setOnClickListener(v->downloadLastRun());
+        Button center=button("▣  RENDER CENTER  /  LOGS");LinearLayout.LayoutParams cpl=new LinearLayout.LayoutParams(-1,dp(46));cpl.topMargin=dp(8);render.addView(center,cpl);center.setOnClickListener(v->openRenderCenter());
 
-        LinearLayout statusCard=card(root);heading(statusCard,"LIVE STATUS","Workflow and download updates");
-        status=label(token==null?"●  READY  —  Add your GitHub token in Settings.":"●  READY  —  Secure token loaded.",12);
-        status.setTextColor(0xff70f5c8);status.setMinLines(2);statusCard.addView(status);
-        TextView foot=label("Designed for Android 10 • GitHub Actions build & render • 480p / 720p",10);
-        foot.setTextColor(0xff7895a5);foot.setGravity(Gravity.CENTER);root.addView(foot);
-
-        buildSettingsPanel();
-        restoreProject();
+        LinearLayout sc=card(root);heading(sc,"SYSTEM STATUS","Cloud queue, render progress and export messages.");
+        status=label(token==null?"●  SETUP REQUIRED  —  Add your GitHub token in Settings.":"●  READY  —  GitHub token secured on this device.",12);status.setTextColor(0xff70f5c8);status.setMinLines(2);sc.addView(status);
+        TextView foot=label("G.I KO KO ViD Gen  •  ANDROID 10+  •  CLOUD MP4 EXPORT",9);foot.setTextColor(0xff6e91a0);foot.setGravity(Gravity.CENTER);root.addView(foot);
+        buildSettingsPanel();restoreProject();
     }
+    private void appendChatMessage(String who,String message){
+        try{String old=prefs().getString("chat_history","G.I KO KO AI DIRECTOR");String next=old+"\n\n"+who+"\n"+message;if(next.length()>9000)next=next.substring(next.length()-9000);prefs().edit().putString("chat_history",next).apply();if(chatTranscript!=null)chatTranscript.setText(next);}catch(Exception ignored){}
+    }
+
     private void buildSettingsPanel(){
         LinearLayout panel=column();panel.setPadding(dp(18),dp(8),dp(18),dp(24));
-        LinearLayout appearance=card(panel);heading(appearance,"APPEARANCE / 3D THEMES","Switch the entire studio look");
-        themeSpinner=spinner(new String[]{"NEBULA PRISM","OBSIDIAN LUX","AURORA GLASS"});appearance.addView(themeSpinner);
-        setSpinnerValue(themeSpinner,prefs().getString("ui_theme","NEBULA PRISM"));
+        LinearLayout appearance=card(panel);heading(appearance,"APPEARANCE","Choose the studio colour theme.");
+        themeSpinner=spinner(new String[]{"NEBULA PRISM","OBSIDIAN LUX","AURORA GLASS"});appearance.addView(themeSpinner);setSpinnerValue(themeSpinner,prefs().getString("ui_theme","NEBULA PRISM"));
         themeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onNothingSelected(android.widget.AdapterView<?> p){} public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){String selected=themeSpinner.getSelectedItem().toString();if(!selected.equals(prefs().getString("ui_theme","NEBULA PRISM"))){saveProject();prefs().edit().putString("ui_theme",selected).apply();applyThemeFromName(selected);if(settingsDialog!=null)settingsDialog.dismiss();settingsDialog=null;buildUi();}}});
-        LinearLayout account=card(panel);heading(account,"SECURITY & GITHUB","Token is encrypted locally with Android Keystore");
-        TextView help=label("Use a fine-grained token for this repository. Grant Actions read/write and Contents read/write for workflow dispatch and release access.",11);help.setTextColor(0xff9eb7c4);account.addView(help);
+        LinearLayout account=card(panel);heading(account,"GITHUB CLOUD ACCESS","Your fine-grained token is encrypted with Android Keystore.");
+        TextView help=label("Required for Cloud Render, status, retry and MP4 download. Grant Actions read/write and Contents read/write for this repository.",11);help.setTextColor(0xff9eb7c4);account.addView(help);
         tokenInput=edit("","GitHub fine-grained token",true);account.addView(tokenInput);
-        saveButton=button(token==null?"SAVE TOKEN":"UPDATE TOKEN");account.addView(saveButton);saveButton.setOnClickListener(v->saveToken());
+        saveButton=button(token==null?"SAVE GITHUB TOKEN":"UPDATE GITHUB TOKEN");account.addView(saveButton);saveButton.setOnClickListener(v->saveToken());
         Button clear=button("REMOVE SAVED TOKEN");account.addView(clear);clear.setOnClickListener(v->clearToken());
-
-        LinearLayout ai=card(panel);heading(ai,"AI PROVIDER","OpenAI-compatible endpoint and model");
-        aiBaseInput=edit("https://api.openai.com/v1","API base URL",false);ai.addView(aiBaseInput);
-        aiModelInput=edit("gpt-4o-mini","Model ID",false);ai.addView(aiModelInput);
-        aiKeyInput=edit("","AI API key — encrypted on device",true);ai.addView(aiKeyInput);
-        Button saveAi=button("SAVE AI PROVIDER");ai.addView(saveAi);saveAi.setOnClickListener(v->saveAiProvider());
-        Button providers=button("◎  PROVIDER MANAGER");ai.addView(providers);providers.setOnClickListener(v->new ProviderManager(this).open());
-
-        LinearLayout output=card(panel);heading(output,"RENDER ENGINE","Choose on-device preview or full cloud production");
-        TextView modeLabel=label("RENDER ENGINE",11);output.addView(modeLabel);
-        renderModeSpinner=spinner(new String[]{"Cloud Render","Local Device Render"});output.addView(renderModeSpinner);
-        setSpinnerValue(renderModeSpinner,prefs().getString("render_mode","Cloud Render"));
-        renderModeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onNothingSelected(android.widget.AdapterView<?> p){} public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){prefs().edit().putString("render_mode",renderModeSpinner.getSelectedItem().toString()).apply();}});
-        localDurationSpinner=spinner(new String[]{"5","10","15"});output.addView(label("LOCAL CLIP DURATION (SECONDS) — MAX 30s",11));output.addView(localDurationSpinner);
-        TextView localNote=label("Local mode exports a silent preview MP4. Use Cloud mode for full-length audio, voice and subtitle mastering.",10);localNote.setTextColor(themeMuted);output.addView(localNote);
-
-        LinearLayout tools=card(panel);heading(tools,"MAINTENANCE","Logs and troubleshooting");
-        Button diagnostics=button("⌁  DIAGNOSTIC CENTER  •  VIEW / COPY / EXPORT");tools.addView(diagnostics);
-        diagnostics.setOnClickListener(v->showDiagnosticCenter());
-        Button done=button("DONE");panel.addView(done);done.setOnClickListener(v->{if(settingsDialog!=null)settingsDialog.dismiss();});
-        settingsPanel=panel;
-        aiBaseInput.setText(prefs().getString("ai_base","https://api.openai.com/v1"));
-        aiModelInput.setText(prefs().getString("ai_model","gpt-4o-mini"));
+        LinearLayout tools=card(panel);heading(tools,"SUPPORT & DIAGNOSTICS","Review logs when a cloud render fails.");
+        Button diagnostics=button("⌁  DIAGNOSTIC CENTER  •  VIEW / COPY / EXPORT");tools.addView(diagnostics);diagnostics.setOnClickListener(v->showDiagnosticCenter());
+        TextView hidden=label("Advanced provider configuration and local rendering are temporarily hidden. Existing saved provider settings are preserved.",10);hidden.setTextColor(themeMuted);tools.addView(hidden);
+        Button done=button("DONE");panel.addView(done);done.setOnClickListener(v->{if(settingsDialog!=null)settingsDialog.dismiss();});settingsPanel=panel;
     }
     private LinearLayout settingsPanel;
     private android.app.AlertDialog settingsDialog;
@@ -367,10 +341,12 @@ public class MainActivity extends Activity {
         new ProviderManager(this).generateStory(aiPrompt,(story,err,provider)->{
             if(err!=null){
                 setBusy(false);if(generationDialog!=null){generationDialog.dismiss();generationDialog=null;}
+                appendChatMessage("AI DIRECTOR","Provider unavailable. I created a basic offline outline; connect a provider later for full AI story writing.");
                 setStatus("AI provider chain failed: "+err+" — using offline outline helper.");
                 offlineStoryAssist(prompt);
                 return;
             }
+            appendChatMessage("AI DIRECTOR","Storyboard draft completed. Review the project details below, then save your draft or start cloud render.");
             titleInput.setText(story.optString("title","Untitled Story"));
             characterInput.setText(story.optString("character_bible",""));
             animationCode=story.optString("animation_code","");
