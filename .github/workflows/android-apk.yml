@@ -10,7 +10,7 @@ on:
       - ".github/workflows/android-apk.yml"
       - ".github/workflows/cloud-render.yml"
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -96,3 +96,15 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Publish APK GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          TAG="apk-build-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" "$APK" \
+            --title "G.I Ko Ko ViD Gen APK — Build #${GITHUB_RUN_NUMBER}" \
+            --notes "Automated G.I Ko Ko ViD Gen Android APK build. This is a debug-signed test APK; install for device testing. Build commit: ${GITHUB_SHA}" \
+            --prerelease
