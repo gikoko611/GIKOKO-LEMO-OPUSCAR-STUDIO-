@@ -97,7 +97,7 @@ Open GitHub Actions → Build G.I Ko Ko ViD Gen APK → Run workflow. Download a
 2. Review the generated title, character bible, scenes, bilingual dialogue and AI animation scene plan. Save the project.
 3. Select **Hybrid**, **Bilingual voice-over**, **30 minutes**, and the required resolution, then tap **START RENDER**.
 4. The APK dispatches `.github/workflows/cloud-render.yml`. GitHub Actions validates and executes `animation_code` through `scripts/animation_runtime.js`, then renders recoverable one-minute segments using `scripts/render_video.py` and joins them with FFmpeg.
-5. `scripts/audio_pipeline.py` creates English/Myanmar Edge TTS, generated background audio, sound accents and Myanmar SRT subtitles. FFmpeg muxes audio/subtitles into the final MP4.
+5. `scripts/audio_pipeline.py` creates English/Myanmar Edge TTS, generated background audio, sound accents and English + Myanmar bilingual SRT subtitles. FFmpeg muxes audio/subtitles into the final MP4.
 6. GitHub Actions publishes the MP4 as a direct GitHub Release asset (tag `render-<run_id>`) and also keeps the ZIP artifact as backup. The APK downloads the MP4 asset directly into the phone's Downloads folder; if the Release asset is unavailable, it falls back to extracting the ZIP artifact.
 
 ## Renderer scope
