@@ -65,7 +65,11 @@ jobs:
           sudo apt-get install -y ffmpeg fonts-noto-core fonts-noto-extra fontconfig
           fc-cache -f
           python -m pip install --upgrade pip
-          python -m pip install Pillow
+          python -m pip install Pillow edge-tts
+          python - <<'PY'
+          import PIL, edge_tts
+          print("Cloud render dependencies OK: Pillow + edge-tts")
+          PY
 
       - name: Validate project input
         env:
