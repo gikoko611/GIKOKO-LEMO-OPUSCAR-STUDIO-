@@ -414,7 +414,7 @@ public class MainActivity extends Activity {
         try{
             String contentType=type.getSelectedItem().toString();
             String selectedStyle=visual.getSelectedItem().toString();
-            String ratio=format.getSelectedItem().toString().substring(0,3).trim();
+            String ratio=format.getSelectedItem().toString().split("  •")[0].trim();
             String duration=length.getSelectedItem().toString().replace(" minute","").replace("s","");
             if(duration.startsWith("Custom"))duration=durationInput.getText().toString().trim();
             if(!duration.matches("[0-9]{1,3}"))duration="2";
