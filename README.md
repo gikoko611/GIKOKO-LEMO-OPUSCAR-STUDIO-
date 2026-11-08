@@ -4,10 +4,10 @@
 
 ## Studio modules
 
-### 0.3.0 Studio Toolkit Upgrade
-- English-first studio interface with ten custom vector feature icons and a neon cyber visual system.
+### 0.4.0 Character Reference + Free Animation Upgrade
+- English-first studio interface with twelve custom vector feature icons and a neon cyber visual system.
 - Ten built-in starter templates: Myanmar palace comedy, folk tale, action adventure, rural mystery, kids fable, travel documentary, product showcase, motivational short, music video and movie recap.
-- Ten illustrated tools: Starter Templates, Character Lab, Dialogue Desk, Subtitle Preview, Audio Lab, Cloud Queue, Project Library, Brand Kit, Format Presets and Diagnostics.
+- Twelve illustrated tools: Starter Templates, Character Lab, Dialogue Desk, Subtitle Preview, Audio Lab, Cloud Queue, Project Library, Brand Kit, Format Presets, Diagnostics, Character Reference Lab and Motion Presets.
 - Three selectable premium themes in Settings: NEBULA PRISM, OBSIDIAN LUX and AURORA GLASS, with dynamic 3D-style bordered cards.
 - Cloud Render supports 16:9, 9:16, 1:1 and 4:5 output ratios plus 24/30/60 FPS selection.
 - The normal user interface is Cloud Render-first. Local Device Render remains in the codebase but is temporarily hidden from the user interface.
@@ -17,6 +17,8 @@
 - Use the AI Director chat composer to describe a film idea in natural language.
 - Gemini Cloud Story Assist creates a title, consistent character bible, scene outline and bilingual dialogue using the `GEMINI_API_KEY` Actions secret.
 - Edit the character bible, scene outline and bilingual dialogue before rendering.
+- Upload a personal character image (compressed and stored with the saved project), choose Float / Bounce / Slide / Pulse / Still, and render that same image with smooth FFmpeg motion.
+- Gemini Flash optionally inspects the uploaded image and adds a visual-identity description to the character bible using the existing `GEMINI_API_KEY` secret.
 - Save the project locally on the phone.
 - Select Hybrid, Cartoon 2D, Cartoon 3D or Cinematic; 1, 5, 10 or 30 minutes; 480p or 720p.
 - Start cloud rendering, check workflow step progress, retry failed jobs and download the MP4 from inside the APK.
@@ -29,7 +31,7 @@
 - Edit all fields manually and save locally.
 - GitHub Actions runs the generated scene-plan function in a restricted Node.js VM (no filesystem, network, process or module APIs; dynamic code generation disabled), validates the result, then the self-contained FFmpeg/Python renderer generates MP4 segments directly from the saved project.
 - Scene titles, character bible, recurring character animation, bilingual dialogue overlays and a full-film progress timeline are rendered into the video.
-- AI-generated scene code drives scene timing, backgrounds, titles, descriptions and mascot motion cues. Visual output remains procedural motion graphics, not photorealistic AI-generated footage or unrestricted arbitrary JavaScript animation.
+- AI-generated scene code drives scene timing, backgrounds, titles, descriptions and motion cues. Uploaded character images are animated as 2D image layers with FFmpeg transform motion. This does not generate new AI video frames, articulate limbs or synthesize lip-sync; Omni/Veo video APIs are not required.
 
 ### 3. Audio & Subtitle Engine
 - Primary voice engine: Gemini 3.8 Flash TTS (`gemini-3.8-flash-tts`) for English and Burmese.
@@ -45,6 +47,11 @@
 - One-minute MP4 segments, up to three retries per segment, and request-ID cache restoration.
 - APK can retry failed jobs and poll GitHub Actions step progress.
 - MP4 and SRT artifact export; artifact retention is 7 days.
+
+## Gemini character reference setup
+1. Reuse the existing repository secret `GEMINI_API_KEY`; no Omni or Veo API key is needed.
+2. The cloud workflow sends the compressed uploaded image to Gemini Flash for visual description only. If Gemini analysis is unavailable, the uploaded image still animates with the selected free motion preset.
+3. The image is carried inside the private workflow input and is not committed as a repository image file. Keep the GitHub repository private if your project prompts and workflow inputs are private.
 
 ## Gemini TTS setup
 1. Open the repository Settings → Secrets and variables → Actions.
