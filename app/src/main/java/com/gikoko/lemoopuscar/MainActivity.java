@@ -142,7 +142,7 @@ public class MainActivity extends Activity {
         String base=aiBaseInput.getText().toString().trim(),model=aiModelInput.getText().toString().trim(),key=aiKeyInput.getText().toString().trim();
         if(!base.startsWith("https://")||model.isEmpty()){setStatus("AI provider needs an HTTPS Base URL and Model ID.");return;}
         try{prefs().edit().putString("ai_base",base).putString("ai_model",model).apply();if(!key.isEmpty())prefs().edit().putString("ai_key_enc",encrypt(key)).apply();aiKeyInput.setText("");setStatus("AI provider settings saved. API key encrypted on device.");}
-        catch(Exception e){setStatus("Could not encrypt AI key: "+e.getMessage());}
+        catch(Exception e){recordException("Save AI provider",e);setStatus("Could not encrypt AI key: "+e.getMessage());}
     }
     private JSONObject buildProject(){
         JSONObject p=new JSONObject();
@@ -217,6 +217,10 @@ public class MainActivity extends Activity {
                 out.write((stamp+"  "+safe+"\n").getBytes("UTF-8"));
             }
         }catch(Exception ignored){}
+    }
+    private void recordException(String context,Exception error){
+        StringWriter sw=new StringWriter();error.printStackTrace(new PrintWriter(sw));
+        appendDiagnostic("EXCEPTION ["+context+"] "+sw.toString());
     }
     private void installCrashLogger(){
         final Thread.UncaughtExceptionHandler previous=Thread.getDefaultUncaughtExceptionHandler();
@@ -321,7 +325,7 @@ public class MainActivity extends Activity {
                 if(r.code!=200)throw new Exception("GitHub token validation failed (HTTP "+r.code+"). Check token and repository permissions.");
                 String encrypted=encrypt(candidate);prefs().edit().putString(TOKEN_KEY,encrypted).apply();token=candidate;
                 main.post(()->{tokenInput.setText("");saveButton.setText("UPDATE TOKEN");setStatus("Token validated and encrypted in Android Keystore.");});
-            }catch(Exception e){setStatus("Token error: "+e.getMessage());}
+            }catch(Exception e){recordException("Validate GitHub token",e);setStatus("Token error: "+e.getMessage());}
             finally{setBusy(false);}
         }).start();
     }
@@ -339,7 +343,7 @@ public class MainActivity extends Activity {
         if(body!=null){c.setDoOutput(true);c.setRequestProperty("Content-Type","application/json; charset=utf-8");byte[] data=body.getBytes("UTF-8");try(OutputStream o=c.getOutputStream()){o.write(data);}}
         int code=c.getResponseCode();InputStream in=(code>=200&&code<400)?c.getInputStream():c.getErrorStream();StringBuilder b=new StringBuilder();
         if(in!=null){try(BufferedReader br=new BufferedReader(new InputStreamReader(in,"UTF-8"))){String line;while((line=br.readLine())!=null)b.append(line);}}
-        String location=c.getHeaderField("Location");c.disconnect();return new ApiResponse(code,b.toString(),location);
+        String location=c.getHeaderField("Location");if(code>=400){String detail=b.toString();if(detail.length()>1800)detail=detail.substring(0,1800);appendDiagnostic("HTTP ERROR "+method+" "+url+" -> "+code+" "+detail);}c.disconnect();return new ApiResponse(code,b.toString(),location);
     }
 
     private void startRender(){
@@ -397,7 +401,7 @@ public class MainActivity extends Activity {
                     Thread.sleep(10000);
                 }
                 throw new Exception("Render is still running. Use CHECK RENDER STATUS and DOWNLOAD LATEST MP4 later.");
-            }catch(Exception e){setStatus("Render error: "+e.getMessage());}
+            }catch(Exception e){recordException("Cloud render",e);setStatus("Render error: "+e.getMessage());}
             finally{setBusy(false);}
         }).start();
     }
@@ -423,7 +427,7 @@ public class MainActivity extends Activity {
                     }
                 }
                 setStatus("Retry is still running. Use CHECK RENDER STATUS when ready.");
-            }catch(Exception e){setStatus("Retry error: "+e.getMessage());}
+            }catch(Exception e){recordException("Retry render",e);setStatus("Retry error: "+e.getMessage());}
             finally{setBusy(false);}
         }).start();
     }
@@ -457,7 +461,7 @@ public class MainActivity extends Activity {
                 if(r.code!=200)throw new Exception("Status request failed: HTTP "+r.code+" "+r.body);
                 JSONObject j=new JSONObject(r.body);
                 setStatus("Render "+j.optString("status")+" / "+j.optString("conclusion","in progress")+"\nRun ID: "+id);
-            }catch(Exception e){setStatus("Status error: "+e.getMessage());}
+            }catch(Exception e){recordException("Check render status",e);setStatus("Status error: "+e.getMessage());}
             finally{setBusy(false);}
         }).start();
     }
@@ -466,7 +470,7 @@ public class MainActivity extends Activity {
         long id=lastRunId();if(id<=0){setStatus("No render run saved yet.");return;}
         if(!ensureStoragePermission()){pendingStart=false;requestStoragePermission();setStatus("Allow storage permission, then tap DOWNLOAD LATEST MP4 again.");return;}
         if(busy)return;setBusy(true);
-        new Thread(()->{try{downloadArtifact(id);}catch(Exception e){setStatus("Download error: "+e.getMessage());}finally{setBusy(false);}}).start();
+        new Thread(()->{try{downloadArtifact(id);}catch(Exception e){recordException("Download MP4",e);setStatus("Download error: "+e.getMessage());}finally{setBusy(false);}}).start();
     }
 
 
