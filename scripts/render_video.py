@@ -53,6 +53,7 @@ def main():
     base=720 if a.resolution=="720p" else 480
     dimensions={"16:9":(base*16//9,base),"9:16":(base,base*16//9),"1:1":(base,base),"4:5":(base*4//5,base)}
     width,height=dimensions.get(a.aspect_ratio,dimensions["16:9"])
+    width += width % 2; height += height % 2
     palettes={"cartoon2d":["0x142b2a","0x263c4b","0x49352a","0x263b32"],
               "cartoon3d":["0x172a36","0x28394e","0x4b3429","0x263d36"],
               "hybrid":["0x101827","0x264a52","0x45312c","0x1b2d3a"],
