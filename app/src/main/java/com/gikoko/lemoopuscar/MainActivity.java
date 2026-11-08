@@ -191,6 +191,7 @@ public class MainActivity extends Activity {
         retryButton=button("↻ RETRY");actions.addView(retryButton,new LinearLayout.LayoutParams(0,dp(46),1));retryButton.setOnClickListener(v->retryFailedRender());
         checkButton=button("◉ STATUS");LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(46),1);cp.leftMargin=dp(7);actions.addView(checkButton,cp);checkButton.setOnClickListener(v->checkLastRun());
         downloadButton=button("↓ MP4");LinearLayout.LayoutParams dp2=new LinearLayout.LayoutParams(0,dp(46),1);dp2.leftMargin=dp(7);actions.addView(downloadButton,dp2);downloadButton.setOnClickListener(v->downloadLastRun());
+        Button renderCenter=button("▣  OPEN RENDER CENTER / LOGS");LinearLayout.LayoutParams rclp=new LinearLayout.LayoutParams(-1,dp(46));rclp.topMargin=dp(8);render.addView(renderCenter,rclp);renderCenter.setOnClickListener(v->openRenderCenter());
 
         LinearLayout statusCard=card(root);heading(statusCard,"LIVE STATUS","Workflow and download updates");
         status=label(token==null?"●  READY  —  Add your GitHub token in Settings.":"●  READY  —  Secure token loaded.",12);
@@ -454,9 +455,19 @@ public class MainActivity extends Activity {
         dialog.getWindow().setLayout((int)(getResources().getDisplayMetrics().widthPixels*0.92),
             (int)(getResources().getDisplayMetrics().heightPixels*0.72));
     }
+    private void openRenderCenter(){
+        LinearLayout panel=column();panel.setPadding(dp(16),dp(12),dp(16),dp(12));
+        TextView title=label("RENDER CENTER / LIVE LOGS",17);title.setTextColor(themeAccent);panel.addView(title);
+        ProgressBar progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);progress.setIndeterminate(busy);panel.addView(progress,new LinearLayout.LayoutParams(-1,dp(8)));
+        TextView note=label("Live job updates, stage messages and diagnostics. Cloud progress is reported from GitHub workflow steps; local progress is reported from encoded frames.",10);note.setTextColor(themeMuted);panel.addView(note);
+        renderCenterLog=new TextView(this);renderCenterLog.setText(readDiagnosticLog());renderCenterLog.setTextColor(themeText);renderCenterLog.setTextSize(11);renderCenterLog.setTextIsSelectable(true);
+        ScrollView scroll=new ScrollView(this);scroll.addView(renderCenterLog);panel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this).setView(panel).setPositiveButton("CLOSE",null).create();dialog.show();
+        dialog.getWindow().setBackgroundDrawable(shape(themeBg,themeBorder,18));dialog.getWindow().setLayout((int)(getResources().getDisplayMetrics().widthPixels*.94),(int)(getResources().getDisplayMetrics().heightPixels*.82));
+    }
     private void setStatus(String s){
         appendDiagnostic("STATUS: "+s);
-        main.post(()->status.setText(s));
+        main.post(()->{if(status!=null)status.setText(s);if(renderCenterLog!=null)renderCenterLog.setText(readDiagnosticLog());});
     }
     private void setBusy(boolean b){
         busy=b;main.post(()->{if(startButton!=null)startButton.setEnabled(!b);if(checkButton!=null)checkButton.setEnabled(!b);if(downloadButton!=null)downloadButton.setEnabled(!b);if(saveButton!=null)saveButton.setEnabled(!b);if(retryButton!=null)retryButton.setEnabled(!b);});
