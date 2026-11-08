@@ -109,3 +109,13 @@ Open GitHub Actions → Build G.I Ko Ko ViD Gen APK → Run workflow. Download a
 
 ## Renderer scope
 The new engine is self-contained and code-driven. It creates animated mascot motion graphics, backgrounds, titles, scene cards, dialogue overlays, audio and subtitles. It is **not** a diffusion model or a photorealistic generative text-to-video engine; AI providers write the story and constrained scene-plan code, while FFmpeg/Python produce the visuals. Image/video provider fields in Provider Control Center remain configuration slots and do not yet invoke external image/video generation APIs.
+
+
+## Gemini Master AI — Full Studio Controller
+- The Android AI Director chat now routes commands through `.github/workflows/studio-agent.yml` using the existing `GEMINI_API_KEY` repository secret.
+- Gemini receives a sanitized snapshot of the current project (no character image Base64, API key, GitHub token, or executable animation code) and returns a validated JSON action plan.
+- The allowlisted command bridge can update project title, character bible, scenes, bilingual dialogue, duration, visual style, resolution, aspect ratio, FPS, voice, music, SFX and subtitles; it can also open existing Studio tools, save a project, inspect render status, retry/download a render, or request a render.
+- Starting a render and retrying a failed render require an explicit confirmation in the APK. Arbitrary code execution, shell commands, repository edits and destructive actions are not exposed to Gemini.
+- Gemini API keys remain in GitHub Actions Secrets. The APK uses the already-encrypted GitHub fine-grained token to dispatch the agent workflow and retrieve its short-lived result artifact.
+- Developer support is limited to the existing Diagnostics screen and the separate AI Render Error Repair workflow, which proposes reviewed pull requests for allowed renderer-script fixes; this mobile agent does not have unrestricted access to the repository source tree.
+- Requires the repository secret `GEMINI_API_KEY` and a saved GitHub fine-grained token with Actions read/write access.
