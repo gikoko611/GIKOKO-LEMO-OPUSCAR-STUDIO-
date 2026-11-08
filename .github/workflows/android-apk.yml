@@ -10,6 +10,7 @@ on:
       - ".github/workflows/android-apk.yml"
       - ".github/workflows/cloud-render.yml"
       - ".github/workflows/story-assist.yml"
+      - ".github/workflows/studio-agent.yml"
 permissions:
   contents: write
 
