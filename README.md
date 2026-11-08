@@ -30,18 +30,31 @@
 - AI-generated scene code drives scene timing, backgrounds, titles, descriptions and mascot motion cues. Visual output remains procedural motion graphics, not photorealistic AI-generated footage or unrestricted arbitrary JavaScript animation.
 
 ### 3. Audio & Subtitle Engine
-- English voice: Edge TTS en-US-GuyNeural.
-- Myanmar voice: Edge TTS my-MM-ThihaNeural.
+- Primary voice engine: Gemini 3.8 Flash TTS (`gemini-3.8-flash-tts`) for English and Burmese.
+- English voice preset: Puck; Myanmar voice preset: Kore (language is automatically detected from the supplied script).
+- Automatic Edge TTS fallback: English `en-US-GuyNeural`, Myanmar `my-MM-ThihaNeural`, when Gemini is not configured or its request fails.
 - Bilingual voice option.
 - Procedurally synthesized background music and scene accents.
 - Myanmar SRT subtitles embedded as an MP4 soft-subtitle track and included as a separate artifact.
-- Edge TTS requires network access and may be rate-limited; it is not an offline voice engine.
+- Both Gemini TTS and Edge TTS require network access. Gemini TTS may be Preview/quota-limited; Burmese is listed for Gemini 3.8 Flash TTS, but not Flash-Lite TTS.
 
 ### 4. Cloud Render Queue
 - GitHub Actions cloud render using the repository's own FFmpeg/Python renderer.
 - One-minute MP4 segments, up to three retries per segment, and request-ID cache restoration.
 - APK can retry failed jobs and poll GitHub Actions step progress.
 - MP4 and SRT artifact export; artifact retention is 7 days.
+
+## Gemini TTS setup
+1. Open the repository Settings → Secrets and variables → Actions.
+2. Add a repository secret named `GEMINI_API_KEY` using a Gemini API key from Google AI Studio. Never paste the key into chat or commit it.
+3. Cloud Render uses Gemini 3.8 Flash TTS as the primary engine and automatically falls back to Edge TTS if the Gemini request fails. If the secret is absent, Edge TTS is used.
+4. The default model is `gemini-3.8-flash-tts`.
+
+## AI render error repair
+- When a manually dispatched Cloud Render run fails, a separate workflow extracts error-focused log lines and asks Gemini 2.5 Flash for a minimal Python patch.
+- Proposed changes are restricted to existing `scripts/*.py` files and must pass `git apply --check`, Python compile checks, both pipeline CLI checks and `git diff --check`.
+- A validated patch is opened as a Pull Request for review; it is never pushed directly to the default branch and does not automatically re-run the render.
+- The repair workflow uses the same `GEMINI_API_KEY` repository secret. If the secret is missing, AI repair is skipped.
 
 ## Secure GitHub token setup
 1. Open https://github.com/settings/personal-access-tokens/new
