@@ -402,8 +402,13 @@ public class MainActivity extends Activity {
             }catch(Exception e){recordException("Import watermark logo",e);setStatus("Logo import failed: "+e.getMessage());}
         }else if(requestCode==703){
             Bitmap source=null,scaled=null;
-            try(InputStream in=getContentResolver().openInputStream(data.getData())){
-                source=BitmapFactory.decodeStream(in);if(source==null)throw new Exception("Unsupported image.");
+            try{
+                BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;
+                try(InputStream boundsIn=getContentResolver().openInputStream(data.getData())){BitmapFactory.decodeStream(boundsIn,null,bounds);}
+                int sample=1;while(Math.max(bounds.outWidth/sample,bounds.outHeight/sample)>1024)sample*=2;
+                BitmapFactory.Options decodeOptions=new BitmapFactory.Options();decodeOptions.inSampleSize=sample;
+                try(InputStream imageIn=getContentResolver().openInputStream(data.getData())){source=BitmapFactory.decodeStream(imageIn,null,decodeOptions);}
+                if(source==null)throw new Exception("Unsupported image.");
                 byte[] compressed=null;
                 int[] limits={512,448,384,320,256};
                 int[] qualities={62,54,46};
