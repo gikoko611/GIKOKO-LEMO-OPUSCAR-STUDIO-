@@ -1,4 +1,4 @@
-# G.I KO KO LEMO OPUSCAR PROFESSIONAL STUDIO
+# G.I Ko Ko ViD Gen
 
 **Powered By I KO KO** — Android-first cartoon and cinematic story production studio.
 
@@ -50,7 +50,7 @@
 - Tap AI STORY ASSIST to draft scenes, bilingual dialogue and the animation scene-plan code. Without an AI key, the app offers a basic offline scene-outline helper instead.
 
 ## Build APK
-Open GitHub Actions → Build G.I KO KO Studio APK → Run workflow. Download artifact GIKOKO-LEMO-OPUSCAR-STUDIO-APK and install app-debug.apk on Android 10 / ARMv7.
+Open GitHub Actions → Build G.I Ko Ko ViD Gen APK → Run workflow. Download artifact GI-KO-KO-VID-GEN-APK and install app-debug.apk on Android 10 / ARMv7.
 
 ## Important limitations
 - The renderer is code-driven and procedural; the AI assistant now writes a constrained JavaScript scene plan, but does not generate new character images or photorealistic cinematic footage.
