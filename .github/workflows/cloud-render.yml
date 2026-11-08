@@ -99,6 +99,14 @@ jobs:
           set -euo pipefail
           python scripts/character_reference.py --project project.json --out project.json
 
+      - name: Analyze uploaded character reference with Gemini (optional)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_VISION_MODEL: gemini-3.8-flash
+        run: |
+          set -euo pipefail
+          python scripts/character_reference.py --project project.json --out project.json
+
       - name: Execute AI animation code in restricted JavaScript sandbox
         run: |
           set -euo pipefail
