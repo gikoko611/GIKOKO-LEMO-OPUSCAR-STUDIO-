@@ -66,6 +66,9 @@ public class MainActivity extends Activity {
     private CheckBox musicCheck,sfxCheck,subtitleCheck;
     private String token;
     private String animationCode="";
+    private String characterReferenceBase64="";
+    private String characterMotion="float";
+    private TextView characterReferenceStatus;
     private boolean busy=false,pendingStart=false;
     private int themeBg=0xff09091b,themeCard=0xff17152b,themeBorder=0xff7158b8,themeAccent=0xff8be9ff,themeText=0xfff1efff,themeMuted=0xffaaa6c8,themeButtonA=0xff6b3de6,themeButtonB=0xffd14aa8;
     private static final String DIAGNOSTIC_FILE="diagnostic.log";
@@ -162,6 +165,7 @@ public class MainActivity extends Activity {
         addToolRow(tools,R.drawable.ic_tool_audio,"AUDIO LAB","Voice, music and sound effects",()->openAudioLab(),R.drawable.ic_tool_cloud,"CLOUD QUEUE","Check render status and logs",()->{checkLastRun();openRenderCenter();});
         addToolRow(tools,R.drawable.ic_tool_projects,"PROJECT LIBRARY","Open saved projects and drafts",()->openProjectLibrary(),R.drawable.ic_tool_brand,"BRAND KIT","Logo and watermark controls",()->openBrandKit());
         addToolRow(tools,R.drawable.ic_tool_ratio,"FORMAT PRESETS","Portrait, landscape and square",()->openFormatPresets(),R.drawable.ic_tool_diagnostics,"DIAGNOSTICS","Copy or export technical logs",()->showDiagnosticCenter());
+        addToolRow(tools,R.drawable.ic_tool_reference,"REFERENCE LAB","Upload your own character image",()->openCharacterReferenceLab(),R.drawable.ic_tool_motion,"MOTION PRESETS","Float, bounce, slide, pulse or still",()->openCharacterReferenceLab());
 
         LinearLayout project=card(root);heading(project,"02  /  PROJECT DETAILS","Keep the title, character identity and scene continuity in one place.");
         titleInput=edit("The Golden Kingdom","Project title",false);project.addView(titleInput);
@@ -265,6 +269,9 @@ public class MainActivity extends Activity {
         try{
             p.put("schema_version",1);p.put("title",titleInput.getText().toString().trim());
             p.put("prompt",promptInput.getText().toString().trim());p.put("character_bible",characterInput.getText().toString().trim());
+            p.put("character_reference_base64",characterReferenceBase64);
+            p.put("character_reference_mime","image/webp");
+            p.put("character_motion",characterMotion);
             if(animationCode!=null&&!animationCode.trim().isEmpty())p.put("animation_code",animationCode);
             JSONArray scenes=new JSONArray();for(String line:sceneInput.getText().toString().split("\n"))if(!line.trim().isEmpty())scenes.put(line.trim());p.put("scenes",scenes);
             JSONArray dialogue=new JSONArray();for(String line:dialogueInput.getText().toString().split("\n"))if(!line.trim().isEmpty()){
@@ -315,6 +322,20 @@ public class MainActivity extends Activity {
             String[] t=templates[which];promptInput.setText(t[1]);titleInput.setText(t[0]);characterInput.setText(t[2]);sceneInput.setText(t[3]);dialogueInput.setText(t[4]);
             setSpinnerValue(styleSpinner,t[5]);setSpinnerValue(durationSpinner,t[6]);setStatus("Template loaded: "+t[0]+". Edit any section before cloud generation.");saveProject();
         }).setNegativeButton("CLOSE",null).show();
+    }
+    private void openCharacterReferenceLab(){
+        LinearLayout panel=column();panel.setPadding(dp(14),dp(8),dp(14),dp(8));
+        TextView note=label("Upload a character image. Gemini will describe its visible design, then the free FFmpeg animation engine will move the uploaded image in your video. No Omni or Veo API is used.",11);
+        note.setTextColor(themeMuted);panel.addView(note);
+        characterReferenceStatus=label(characterReferenceBase64.isEmpty()?"No reference image selected.":"Reference image ready for cloud animation.",11);
+        characterReferenceStatus.setTextColor(0xff62edc7);panel.addView(characterReferenceStatus);
+        Button upload=button("＋  UPLOAD CHARACTER IMAGE");panel.addView(upload);
+        upload.setOnClickListener(v->{Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("image/*");startActivityForResult(intent,703);});
+        TextView motionLabel=label("ANIMATION MOTION",11);motionLabel.setTextColor(themeAccent);panel.addView(motionLabel);
+        Spinner motion=spinner(new String[]{"float","bounce","slide","pulse","still"});panel.addView(motion);setSpinnerValue(motion,characterMotion);
+        new android.app.AlertDialog.Builder(this).setTitle("CHARACTER REFERENCE LAB").setView(panel)
+            .setPositiveButton("APPLY",(d,w)->{characterMotion=motion.getSelectedItem().toString();saveProject();setStatus("Character reference settings saved. Gemini analysis and free image animation will run during Cloud Render.");})
+            .setNegativeButton("CLOSE",null).show();
     }
     private void openCharacterBuilder(){
         EditText input=edit(characterInput.getText().toString(),"Describe the character's appearance, outfit, colours, personality and continuity rules.",false);input.setMinLines(5);
@@ -367,7 +388,8 @@ public class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
         super.onActivityResult(requestCode,resultCode,data);
-        if(requestCode==702&&resultCode==RESULT_OK&&data!=null&&data.getData()!=null){
+        if(resultCode!=RESULT_OK||data==null||data.getData()==null)return;
+        if(requestCode==702){
             try(InputStream in=getContentResolver().openInputStream(data.getData())){
                 Bitmap source=BitmapFactory.decodeStream(in);if(source==null)throw new Exception("Unsupported image.");
                 float scale=Math.min(1f,320f/Math.max(source.getWidth(),source.getHeight()));
@@ -378,11 +400,37 @@ public class MainActivity extends Activity {
                 if(source!=scaled)source.recycle();if(scaled!=source)scaled.recycle();
                 setStatus("Watermark logo imported. It will be included in Cloud Render.");
             }catch(Exception e){recordException("Import watermark logo",e);setStatus("Logo import failed: "+e.getMessage());}
+        }else if(requestCode==703){
+            Bitmap source=null,scaled=null;
+            try(InputStream in=getContentResolver().openInputStream(data.getData())){
+                source=BitmapFactory.decodeStream(in);if(source==null)throw new Exception("Unsupported image.");
+                byte[] compressed=null;
+                int[] limits={512,448,384,320,256};
+                int[] qualities={62,54,46};
+                for(int limit:limits){
+                    float scale=Math.min(1f,(float)limit/Math.max(source.getWidth(),source.getHeight()));
+                    scaled=Bitmap.createScaledBitmap(source,Math.max(1,(int)(source.getWidth()*scale)),Math.max(1,(int)(source.getHeight()*scale)),true);
+                    for(int quality:qualities){
+                        ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+                        scaled.compress(Bitmap.CompressFormat.WEBP,quality,bytes);
+                        if(bytes.size()<=19500){compressed=bytes.toByteArray();break;}
+                    }
+                    if(compressed!=null)break;
+                    if(scaled!=source){scaled.recycle();scaled=null;}
+                }
+                if(compressed==null)throw new Exception("Image is too detailed for the safe project upload limit. Try a simpler character PNG/WebP.");
+                characterReferenceBase64=Base64.encodeToString(compressed,Base64.NO_WRAP);
+                prefs().edit().putString("character_reference_base64",characterReferenceBase64).apply();
+                if(characterReferenceStatus!=null)characterReferenceStatus.setText("Reference image ready ("+(compressed.length/1024)+" KB compressed).");
+                setStatus("Character reference imported. Gemini visual analysis + free cloud animation are enabled for the next render.");
+                saveProject();
+            }catch(Exception e){recordException("Import character reference",e);setStatus("Character image import failed: "+e.getMessage());}
+            finally{if(source!=null&&!source.isRecycled())source.recycle();if(scaled!=null&&scaled!=source&&!scaled.isRecycled())scaled.recycle();}
         }
     }
     @Override protected void onPause(){
         super.onPause();
-        if(titleInput!=null){try{prefs().edit().putString("last_project",buildProject().toString()).putString("watermark_logo_base64",watermarkLogoBase64).apply();}catch(Exception ignored){}}
+        if(titleInput!=null){try{prefs().edit().putString("last_project",buildProject().toString()).putString("watermark_logo_base64",watermarkLogoBase64).putString("character_reference_base64",characterReferenceBase64).apply();}catch(Exception ignored){}}
     }
 
     private void saveProject(){
@@ -393,7 +441,7 @@ public class MainActivity extends Activity {
             for(int i=0;i<library.length();i++){JSONObject item=library.optJSONObject(i);if(item!=null&&title.equals(item.optString("title"))){library.put(i,new JSONObject().put("title",title).put("project",p));replaced=true;break;}}
             if(!replaced)library.put(new JSONObject().put("title",title).put("project",p));
             while(library.length()>20)library.remove(0);
-            prefs().edit().putString("project_library",library.toString()).putString("last_project",raw).putString("watermark_logo_base64",watermarkLogoBase64).apply();
+            prefs().edit().putString("project_library",library.toString()).putString("last_project",raw).putString("watermark_logo_base64",watermarkLogoBase64).putString("character_reference_base64",characterReferenceBase64).apply();
         }catch(Exception e){recordException("Save project library",e);prefs().edit().putString("last_project",raw).apply();}
         setStatus("Project saved to this phone and Project Library ("+raw.length()+" characters).");
     }
@@ -403,6 +451,8 @@ public class MainActivity extends Activity {
         try{JSONObject p=new JSONObject(raw);titleInput.setText(p.optString("title",""));promptInput.setText(p.optString("prompt",""));characterInput.setText(p.optString("character_bible",""));
             JSONArray a=p.optJSONArray("scenes");if(a!=null){StringBuilder b=new StringBuilder();for(int i=0;i<a.length();i++)b.append(a.getString(i)).append("\n");sceneInput.setText(b.toString());}
             animationCode=p.optString("animation_code","");
+            characterReferenceBase64=p.optString("character_reference_base64",prefs().getString("character_reference_base64",""));
+            characterMotion=p.optString("character_motion","float");
             watermarkLogoBase64=p.optString("watermark_logo_base64",prefs().getString("watermark_logo_base64",""));
             JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(b.toString());}
             musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("bilingual_subtitles",p.optBoolean("myanmar_subtitles",true)));
