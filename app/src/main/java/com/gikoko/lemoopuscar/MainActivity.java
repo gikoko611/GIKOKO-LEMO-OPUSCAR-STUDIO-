@@ -964,7 +964,7 @@ public class MainActivity extends Activity {
     private String callGeminiText(String apiKey,String model,String prompt)throws Exception{return callGeminiResponse(apiKey,model,prompt,false).optString("text","");}
     private JSONObject callGeminiJson(String apiKey,String model,String prompt)throws Exception{
         String raw=callGeminiResponse(apiKey,model,prompt,true).optString("text","").trim();
-        if(raw.startsWith("```")){int first=raw.indexOf('\\n');if(first>=0)raw=raw.substring(first+1);int last=raw.lastIndexOf("```");if(last>=0)raw=raw.substring(0,last).trim();}
+        if(raw.startsWith("```")){int first=raw.indexOf('\n');if(first>=0)raw=raw.substring(first+1);int last=raw.lastIndexOf("```");if(last>=0)raw=raw.substring(0,last).trim();}
         return new JSONObject(raw);
     }
     private String loadToken(){
