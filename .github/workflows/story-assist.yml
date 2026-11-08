@@ -1,0 +1,95 @@
+name: G.I Ko Ko AI Director Story Assist
+run-name: AI Director Story - ${{ inputs.request_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Unique request ID
+        required: true
+        type: string
+      prompt:
+        description: Film idea from the Android chat composer
+        required: true
+        type: string
+      duration:
+        description: Target duration in minutes
+        required: true
+        type: choice
+        options: ["1", "5", "10", "30"]
+      style:
+        description: Visual style
+        required: true
+        type: choice
+        options: [hybrid, cartoon2d, cartoon3d, cinematic]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: gikoko-story-${{ inputs.request_id }}
+  cancel-in-progress: false
+
+jobs:
+  story:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Generate structured story with Gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          STORY_PROMPT: ${{ inputs.prompt }}
+          STORY_DURATION: ${{ inputs.duration }}
+          STORY_STYLE: ${{ inputs.style }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request, urllib.error, pathlib
+          key=os.environ.get("GEMINI_API_KEY","").strip()
+          if not key:
+              raise SystemExit("GEMINI_API_KEY repository secret is missing.")
+          prompt=os.environ["STORY_PROMPT"]
+          duration=os.environ["STORY_DURATION"]
+          style=os.environ["STORY_STYLE"]
+          instruction=f"""You are the G.I KO KO AI Director. Create a production-ready story for an Android-first cartoon/cinematic studio.
+          User idea: {prompt}
+          Duration: {duration} minutes. Style: {style}.
+          Return ONLY valid JSON with this exact structure:
+          {{
+            "title":"short film title",
+            "character_bible":"detailed consistent character appearance, clothing, colours and personality",
+            "scenes":["scene 1 description","scene 2 description"],
+            "dialogue":[{{"english":"English dialogue","myanmar":"မြန်မာဘာသာပြန်"}}]
+          }}
+          For 1 minute create 4-6 scenes; 5 minutes 8-12 scenes; 10 minutes 12-18 scenes; 30 minutes 18-30 scenes.
+          Include at least 2 bilingual dialogue turns per scene where practical. Keep the same characters and continuity throughout.
+          Do not include markdown fences, external URLs, animation code, or claims that footage is AI-generated."""
+          body={"contents":[{"parts":[{"text":instruction}]}],"generationConfig":{"temperature":0.75,"responseMimeType":"application/json"}}
+          url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+key
+          req=urllib.request.Request(url,data=json.dumps(body).encode(),headers={"Content-Type":"application/json"},method="POST")
+          try:
+              with urllib.request.urlopen(req,timeout=120) as res: data=json.loads(res.read().decode())
+          except urllib.error.HTTPError as e:
+              detail=e.read().decode(errors="replace")[:1200]
+              raise SystemExit(f"Gemini API HTTP {e.code}: {detail}")
+          parts=data.get("candidates",[{}])[0].get("content",{}).get("parts",[])
+          raw="".join(p.get("text","") for p in parts).strip()
+          if raw.startswith("```"):
+              raw=raw.split("\n",1)[1].rsplit("```",1)[0].strip()
+          story=json.loads(raw)
+          if not isinstance(story.get("scenes"),list) or not story["scenes"]:
+              raise SystemExit("Gemini returned no scenes.")
+          if not isinstance(story.get("dialogue"),list): story["dialogue"]=[]
+          story["scenes"]=story["scenes"][:60]
+          story["dialogue"]=story["dialogue"][:120]
+          pathlib.Path("story.json").write_text(json.dumps(story,ensure_ascii=False,indent=2),encoding="utf-8")
+          print("AI Director story generated:",story.get("title","Untitled"),"| scenes:",len(story["scenes"]),"| dialogue:",len(story["dialogue"]))
+          PY
+      - name: Upload structured story result
+        uses: actions/upload-artifact@v4
+        with:
+          name: GI-KO-KO-STORY-${{ inputs.request_id }}
+          path: story.json
+          if-no-files-found: error
+          retention-days: 1
