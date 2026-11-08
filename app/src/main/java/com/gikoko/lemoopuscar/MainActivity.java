@@ -17,6 +17,9 @@ import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.graphics.Typeface;
@@ -26,6 +29,7 @@ import android.widget.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.*;
+import java.io.ByteArrayOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -53,6 +57,9 @@ public class MainActivity extends Activity {
     private EditText tokenInput,aiBaseInput,aiModelInput,aiKeyInput,titleInput,promptInput,characterInput,sceneInput,dialogueInput;
     private Spinner styleSpinner,durationSpinner,resolutionSpinner,aspectRatioSpinner,frameRateSpinner,renderModeSpinner,localDurationSpinner,themeSpinner;
     private EditText watermarkInput;
+    private String watermarkLogoBase64="";
+    private android.app.ProgressDialog generationDialog;
+    private TextView renderCenterLog;
     private TextView status;
     private Button startButton,saveButton,checkButton,downloadButton,retryButton;
     private Spinner voiceSpinner;
@@ -173,7 +180,9 @@ public class MainActivity extends Activity {
         sfxCheck=new CheckBox(this);sfxCheck.setText("Sound effects");sfxCheck.setTextColor(themeText);sfxCheck.setChecked(true);config.addView(sfxCheck);
         subtitleCheck=new CheckBox(this);subtitleCheck.setText("Myanmar subtitle track");subtitleCheck.setTextColor(themeText);subtitleCheck.setChecked(true);config.addView(subtitleCheck);
         watermarkInput=edit("POWERED BY I KO KO","Watermark text",false);config.addView(label("WATERMARK / BRANDING",11));config.addView(watermarkInput);
+        Button addLogo=button("＋  ADD MEDIA / WATERMARK LOGO");project.addView(addLogo);addLogo.setOnClickListener(v->pickWatermarkLogo());
         Button saveProject=button("▣  SAVE PROJECT");project.addView(saveProject);saveProject.setOnClickListener(v->saveProject());
+        Button library=button("▤  PROJECT LIBRARY");project.addView(library);library.setOnClickListener(v->openProjectLibrary());
 
         LinearLayout render=card(root);heading(render,"02  •  RENDER STUDIO","Cloud rendering • MP4 output");
         startButton=button("▶   START VIDEO RENDER");render.addView(startButton);
@@ -285,6 +294,7 @@ public class MainActivity extends Activity {
             p.put("aspect_ratio",aspectRatioSpinner==null?"16:9":aspectRatioSpinner.getSelectedItem().toString());
             p.put("fps",frameRateSpinner==null?"24":frameRateSpinner.getSelectedItem().toString());
             p.put("watermark",watermarkInput==null?"POWERED BY I KO KO":watermarkInput.getText().toString().trim());
+            if(!watermarkLogoBase64.isEmpty())p.put("watermark_logo_base64",watermarkLogoBase64);
         }catch(Exception ignored){}return p;
     }
     private void saveProject(){
