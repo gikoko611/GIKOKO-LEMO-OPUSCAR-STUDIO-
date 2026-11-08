@@ -55,7 +55,7 @@ public class MainActivity extends Activity {
     private static final String RUN_KEY="last_run_id";
     private final Handler main=new Handler(Looper.getMainLooper());
     private EditText tokenInput,aiBaseInput,aiModelInput,aiKeyInput,titleInput,promptInput,characterInput,sceneInput,dialogueInput,durationInput;
-    private Spinner styleSpinner,resolutionSpinner,aspectRatioSpinner,frameRateSpinner,renderModeSpinner,localDurationSpinner,themeSpinner;
+    private Spinner styleSpinner,resolutionSpinner,aspectRatioSpinner,frameRateSpinner,renderModeSpinner,localDurationSpinner,themeSpinner,geminiModelSpinner;
     private EditText watermarkInput;
     private String watermarkLogoBase64="";
     private android.app.ProgressDialog generationDialog;
@@ -211,8 +211,22 @@ public class MainActivity extends Activity {
         try{String old=prefs().getString("chat_history","G.I KO KO AI DIRECTOR");String next=old+"\n\n"+who+"\n"+message;if(next.length()>9000)next=next.substring(next.length()-9000);prefs().edit().putString("chat_history",next).apply();if(chatTranscript!=null){chatTranscript.setText(next);chatTranscript.post(()->chatTranscript.scrollTo(0,chatTranscript.getLayout()==null?0:chatTranscript.getLayout().getLineTop(chatTranscript.getLineCount())-chatTranscript.getHeight()));}}catch(Exception ignored){}
     }
 
+    private String[] geminiFreeModels(){
+        return new String[]{"gemini-3.8-flash","gemini-3.6-flash","gemini-2.5-flash","gemini-2.5-flash-lite"};
+    }
+    private String getSelectedGeminiModel(){
+        if(geminiModelSpinner!=null&&geminiModelSpinner.getSelectedItem()!=null)return geminiModelSpinner.getSelectedItem().toString();
+        return prefs().getString("gemini_model","gemini-3.8-flash");
+    }
     private void buildSettingsPanel(){
         LinearLayout panel=column();panel.setPadding(dp(18),dp(8),dp(18),dp(24));
+        LinearLayout ai=card(panel);heading(ai,"GEMINI AI  /  FREE MODEL","Choose the Gemini API model used by AI Director and Master AI. Only free-tier model IDs are listed; availability and quotas depend on your Google AI Studio project.");
+        geminiModelSpinner=spinner(geminiFreeModels());
+        setSpinnerValue(geminiModelSpinner,prefs().getString("gemini_model","gemini-3.8-flash"));
+        ai.addView(geminiModelSpinner);
+        TextView secure=label("API KEY: GitHub Actions repository secret  •  GEMINI_API_KEY. Never stored in this APK.",10);secure.setTextColor(0xff63e8c5);ai.addView(secure);
+        Button saveGemini=button("SAVE GEMINI MODEL");ai.addView(saveGemini);
+        saveGemini.setOnClickListener(v->{String selected=getSelectedGeminiModel();prefs().edit().putString("gemini_model",selected).apply();setStatus("Gemini model saved: "+selected+". API key remains in GitHub Secrets.");});
         LinearLayout appearance=card(panel);heading(appearance,"APPEARANCE","Choose the studio colour theme.");
         themeSpinner=spinner(new String[]{"NEBULA PRISM","OBSIDIAN LUX","AURORA GLASS"});appearance.addView(themeSpinner);setSpinnerValue(themeSpinner,prefs().getString("ui_theme","NEBULA PRISM"));
         themeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onNothingSelected(android.widget.AdapterView<?> p){} public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){String selected=themeSpinner.getSelectedItem().toString();if(!selected.equals(prefs().getString("ui_theme","NEBULA PRISM"))){saveProject();prefs().edit().putString("ui_theme",selected).apply();applyThemeFromName(selected);if(settingsDialog!=null)settingsDialog.dismiss();settingsDialog=null;buildUi();}}});
@@ -526,7 +540,7 @@ public class MainActivity extends Activity {
         new Thread(()->{
             try{
                 JSONObject inputs=new JSONObject();
-                inputs.put("request_id",requestId);inputs.put("prompt",prompt);inputs.put("duration",duration);inputs.put("style",style);
+                inputs.put("request_id",requestId);inputs.put("prompt",prompt);inputs.put("duration",duration);inputs.put("style",style);inputs.put("gemini_model",getSelectedGeminiModel());
                 JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
                 ApiResponse dispatch=api("POST",API+"/actions/workflows/story-assist.yml/dispatches",token,payload.toString());
                 if(dispatch.code!=204)throw new Exception("Gemini story workflow dispatch failed (HTTP "+dispatch.code+"): "+dispatch.body);
@@ -600,7 +614,7 @@ public class MainActivity extends Activity {
         generationDialog=new android.app.ProgressDialog(this);generationDialog.setTitle("G.I KO KO  /  GEMINI MASTER AI");generationDialog.setMessage("Securely sending the command to Gemini through GitHub Actions…");generationDialog.setIndeterminate(true);generationDialog.setCancelable(false);generationDialog.show();
         new Thread(()->{
             try{
-                JSONObject inputs=new JSONObject();inputs.put("request_id",requestId);inputs.put("prompt",prompt);inputs.put("project_json",projectJson);
+                JSONObject inputs=new JSONObject();inputs.put("request_id",requestId);inputs.put("prompt",prompt);inputs.put("project_json",projectJson);inputs.put("gemini_model",getSelectedGeminiModel());
                 JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
                 ApiResponse dispatched=api("POST",API+"/actions/workflows/studio-agent.yml/dispatches",token,payload.toString());
                 if(dispatched.code!=204)throw new Exception("Gemini Master AI dispatch failed (HTTP "+dispatched.code+"): "+dispatched.body);
@@ -881,7 +895,7 @@ public class MainActivity extends Activity {
                 JSONObject inputs=new JSONObject();inputs.put("style",style);inputs.put("duration",duration);inputs.put("resolution",resolution);inputs.put("request_id",requestId);
                 inputs.put("aspect_ratio",aspectRatioSpinner.getSelectedItem().toString());
                 inputs.put("fps",frameRateSpinner.getSelectedItem().toString());
-                inputs.put("project_json",projectJson);
+                inputs.put("project_json",projectJson);inputs.put("gemini_model",getSelectedGeminiModel());
                 JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
                 ApiResponse dispatched=api("POST",API+"/actions/workflows/"+WORKFLOW+"/dispatches",token,payload.toString());
                 if(dispatched.code!=204)throw new Exception("Workflow dispatch failed (HTTP "+dispatched.code+"): "+dispatched.body);
