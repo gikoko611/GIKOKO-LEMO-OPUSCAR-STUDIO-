@@ -77,8 +77,8 @@ jobs:
           Include at least 2 bilingual dialogue turns per scene where practical. Keep the same characters and continuity throughout.
           Do not include markdown fences, external URLs, animation code, or claims that footage is AI-generated."""
           body={"contents":[{"parts":[{"text":instruction}]}],"generationConfig":{"temperature":0.75,"responseMimeType":"application/json"}}
-          url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+key
-          req=urllib.request.Request(url,data=json.dumps(body).encode(),headers={"Content-Type":"application/json"},method="POST")
+          url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent"
+          req=urllib.request.Request(url,data=json.dumps(body).encode(),headers={"Content-Type":"application/json","x-goog-api-key":key},method="POST")
           try:
               with urllib.request.urlopen(req,timeout=120) as res: data=json.loads(res.read().decode())
           except urllib.error.HTTPError as e:
