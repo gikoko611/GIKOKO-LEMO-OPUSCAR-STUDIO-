@@ -184,6 +184,10 @@ public class MainActivity extends Activity {
     }
     private void buildSettingsPanel(){
         LinearLayout panel=column();panel.setPadding(dp(18),dp(8),dp(18),dp(24));
+        LinearLayout appearance=card(panel);heading(appearance,"APPEARANCE / 3D THEMES","Switch the entire studio look");
+        themeSpinner=spinner(new String[]{"NEBULA PRISM","OBSIDIAN LUX","AURORA GLASS"});appearance.addView(themeSpinner);
+        setSpinnerValue(themeSpinner,prefs().getString("ui_theme","NEBULA PRISM"));
+        themeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onNothingSelected(android.widget.AdapterView<?> p){} public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){String selected=themeSpinner.getSelectedItem().toString();if(!selected.equals(prefs().getString("ui_theme","NEBULA PRISM"))){saveProject();prefs().edit().putString("ui_theme",selected).apply();applyThemeFromName(selected);if(settingsDialog!=null)settingsDialog.dismiss();settingsDialog=null;buildUi();}}});
         LinearLayout account=card(panel);heading(account,"SECURITY & GITHUB","Token is encrypted locally with Android Keystore");
         TextView help=label("Use a fine-grained token for this repository. Grant Actions read/write and Contents read/write for workflow dispatch and release access.",11);help.setTextColor(0xff9eb7c4);account.addView(help);
         tokenInput=edit("","GitHub fine-grained token",true);account.addView(tokenInput);
@@ -198,12 +202,20 @@ public class MainActivity extends Activity {
         Button providers=button("◎  PROVIDER MANAGER");ai.addView(providers);providers.setOnClickListener(v->new ProviderManager(this).open());
 
         LinearLayout output=card(panel);heading(output,"VIDEO & AUDIO","Keep advanced controls here, away from the main workspace");
+        TextView modeLabel=label("RENDER ENGINE",11);output.addView(modeLabel);
+        renderModeSpinner=spinner(new String[]{"Cloud Render","Local Device Render"});output.addView(renderModeSpinner);
+        setSpinnerValue(renderModeSpinner,prefs().getString("render_mode","Cloud Render"));
+        renderModeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onNothingSelected(android.widget.AdapterView<?> p){} public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){prefs().edit().putString("render_mode",renderModeSpinner.getSelectedItem().toString()).apply();}});
+        localDurationSpinner=spinner(new String[]{"5","10","15","30"});output.addView(label("LOCAL CLIP DURATION (SECONDS) — MAX 30s",11));output.addView(localDurationSpinner);
         TextView styleLabel=label("VISUAL STYLE",11);output.addView(styleLabel);
         styleSpinner=spinner(new String[]{"hybrid","cartoon2d","cartoon3d","cinematic"});output.addView(styleSpinner);
         TextView durationLabel=label("DURATION (MINUTES)",11);output.addView(durationLabel);
         durationSpinner=spinner(new String[]{"1","5","10","30"});output.addView(durationSpinner);
         TextView resolutionLabel=label("OUTPUT RESOLUTION",11);output.addView(resolutionLabel);
         resolutionSpinner=spinner(new String[]{"480p","720p"});output.addView(resolutionSpinner);
+        aspectRatioSpinner=spinner(new String[]{"16:9","9:16","1:1","4:5"});output.addView(label("VIDEO VIEW / ASPECT RATIO",11));output.addView(aspectRatioSpinner);
+        frameRateSpinner=spinner(new String[]{"24","30","60"});output.addView(label("FRAME RATE",11));output.addView(frameRateSpinner);
+        watermarkInput=edit("POWERED BY I KO KO","Watermark text",false);output.addView(label("WATERMARK / BRANDING",11));output.addView(watermarkInput);
         voiceSpinner=spinner(new String[]{"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"});output.addView(label("VOICE-OVER",11));output.addView(voiceSpinner);
         musicCheck=new CheckBox(this);musicCheck.setText("Background music");musicCheck.setTextColor(0xffd9f7ff);musicCheck.setChecked(true);output.addView(musicCheck);
         sfxCheck=new CheckBox(this);sfxCheck.setText("Sound effects");sfxCheck.setTextColor(0xffd9f7ff);sfxCheck.setChecked(true);output.addView(sfxCheck);
