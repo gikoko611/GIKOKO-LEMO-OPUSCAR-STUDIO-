@@ -297,6 +297,39 @@ public class MainActivity extends Activity {
             if(!watermarkLogoBase64.isEmpty())p.put("watermark_logo_base64",watermarkLogoBase64);
         }catch(Exception ignored){}return p;
     }
+
+    private void openProjectLibrary(){
+        try{
+            JSONArray library=new JSONArray(prefs().getString("project_library","[]"));
+            if(library.length()==0){new android.app.AlertDialog.Builder(this).setTitle("PROJECT LIBRARY").setMessage("No saved projects yet. Save a project to add it here.").setPositiveButton("OK",null).show();return;}
+            String[] names=new String[library.length()];
+            for(int i=0;i<library.length();i++){JSONObject item=library.optJSONObject(i);names[i]=item==null?"Untitled":item.optString("title","Untitled");}
+            new android.app.AlertDialog.Builder(this).setTitle("OPEN SAVED PROJECT").setItems(names,(d,which)->{JSONObject item=library.optJSONObject(which);if(item!=null){JSONObject p=item.optJSONObject("project");if(p!=null){prefs().edit().putString("last_project",p.toString()).apply();buildUi();}}}).setNegativeButton("CLOSE",null).show();
+        }catch(Exception e){setStatus("Project Library error: "+e.getMessage());}
+    }
+    private void pickWatermarkLogo(){
+        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("image/*");startActivityForResult(intent,702);
+    }
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode==702&&resultCode==RESULT_OK&&data!=null&&data.getData()!=null){
+            try(InputStream in=getContentResolver().openInputStream(data.getData())){
+                Bitmap source=BitmapFactory.decodeStream(in);if(source==null)throw new Exception("Unsupported image.");
+                float scale=Math.min(1f,320f/Math.max(source.getWidth(),source.getHeight()));
+                Bitmap scaled=Bitmap.createScaledBitmap(source,Math.max(1,(int)(source.getWidth()*scale)),Math.max(1,(int)(source.getHeight()*scale)),true);
+                ByteArrayOutputStream bytes=new ByteArrayOutputStream();scaled.compress(Bitmap.CompressFormat.JPEG,58,bytes);
+                watermarkLogoBase64=Base64.encodeToString(bytes.toByteArray(),Base64.NO_WRAP);
+                prefs().edit().putString("watermark_logo_base64",watermarkLogoBase64).apply();
+                if(source!=scaled)source.recycle();if(scaled!=source)scaled.recycle();
+                setStatus("Watermark logo imported. It will be included in Cloud Render.");
+            }catch(Exception e){recordException("Import watermark logo",e);setStatus("Logo import failed: "+e.getMessage());}
+        }
+    }
+    @Override protected void onPause(){
+        super.onPause();
+        if(titleInput!=null){try{prefs().edit().putString("last_project",buildProject().toString()).putString("watermark_logo_base64",watermarkLogoBase64).apply();}catch(Exception ignored){}}
+    }
+
     private void saveProject(){
         JSONObject p=buildProject();String raw=p.toString();prefs().edit().putString("last_project",raw).apply();setStatus("Project saved on this phone ("+raw.length()+" characters).");
     }
@@ -306,6 +339,7 @@ public class MainActivity extends Activity {
         try{JSONObject p=new JSONObject(raw);titleInput.setText(p.optString("title",""));promptInput.setText(p.optString("prompt",""));characterInput.setText(p.optString("character_bible",""));
             JSONArray a=p.optJSONArray("scenes");if(a!=null){StringBuilder b=new StringBuilder();for(int i=0;i<a.length();i++)b.append(a.getString(i)).append("\n");sceneInput.setText(b.toString());}
             animationCode=p.optString("animation_code","");
+            watermarkLogoBase64=p.optString("watermark_logo_base64",prefs().getString("watermark_logo_base64",""));
             JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(b.toString());}
             musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("myanmar_subtitles",true));
             setSpinnerValue(styleSpinner,p.optString("style","cartoon2d"));setSpinnerValue(durationSpinner,p.optString("duration_minutes","1"));setSpinnerValue(resolutionSpinner,p.optString("resolution","480p"));setSpinnerValue(voiceSpinner,p.optString("voice","No voice-over"));
