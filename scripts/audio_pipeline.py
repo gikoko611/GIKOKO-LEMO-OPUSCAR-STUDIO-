@@ -58,7 +58,7 @@ async def edge_tts_fallback(text, voice, target):
     return mp3_target
 
 async def make_tts(text, voice, target):
-    provider=os.environ.get("TTS_PROVIDER","auto").strip().lower()
+    provider=os.environ.get("TTS_PROVIDER","edge").strip().lower()
     use_gemini=provider in ("auto","gemini") and bool(os.environ.get("GEMINI_API_KEY","").strip())
     if provider=="gemini" and not os.environ.get("GEMINI_API_KEY","").strip():
         raise RuntimeError("TTS_PROVIDER=gemini but GEMINI_API_KEY is missing")
