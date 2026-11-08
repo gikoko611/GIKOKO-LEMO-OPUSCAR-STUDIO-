@@ -361,11 +361,12 @@ public class MainActivity extends Activity {
         if(busy)return;
         String prompt=promptInput.getText().toString().trim();
         if(prompt.isEmpty()){setStatus("Enter a film idea first.");return;}
-        setBusy(true);setStatus("AI Director: trying configured providers with automatic fallback…");
+        setBusy(true);setStatus("AI Director: analyzing prompt and building storyboard…");
+        generationDialog=new android.app.ProgressDialog(this);generationDialog.setTitle("AI PROJECT GENERATION");generationDialog.setMessage("Connecting to selected AI provider…");generationDialog.setIndeterminate(true);generationDialog.setCancelable(false);generationDialog.show();
         String aiPrompt=prompt+"\nTarget video duration: "+durationSpinner.getSelectedItem().toString()+" minutes. Visual style: "+styleSpinner.getSelectedItem().toString()+". For a 30-minute film, create a detailed long-form story with 18-30 scenes and 30-60 bilingual dialogue turns. Keep the same character appearance and personality throughout.";
         new ProviderManager(this).generateStory(aiPrompt,(story,err,provider)->{
             if(err!=null){
-                setBusy(false);
+                setBusy(false);if(generationDialog!=null){generationDialog.dismiss();generationDialog=null;}
                 setStatus("AI provider chain failed: "+err+" — using offline outline helper.");
                 offlineStoryAssist(prompt);
                 return;
@@ -379,7 +380,7 @@ public class MainActivity extends Activity {
             JSONArray ds=story.optJSONArray("dialogue");StringBuilder db=new StringBuilder();
             if(ds!=null)for(int i=0;i<ds.length();i++){JSONObject d=ds.optJSONObject(i);db.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}
             dialogueInput.setText(db.toString());
-            setBusy(false);setStatus("AI story draft ready via "+provider+". Review and edit before rendering.");
+            setBusy(false);if(generationDialog!=null){generationDialog.dismiss();generationDialog=null;}setStatus("AI story draft ready via "+provider+". Review and edit before rendering.");
         });
     }
     private void offlineStoryAssist(String prompt){
