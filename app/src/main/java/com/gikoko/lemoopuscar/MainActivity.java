@@ -613,6 +613,7 @@ public class MainActivity extends Activity {
         final String resolution=resolutionSpinner.getSelectedItem().toString();
         final String ratio=aspectRatioSpinner.getSelectedItem().toString();
         final int fps=Integer.parseInt(frameRateSpinner.getSelectedItem().toString());
+        if(!"480p".equals(resolution)||fps>24){setStatus("For stable Local Render on low-memory phones, select 480p and 24 FPS. Use Cloud Render for 720p or 30/60 FPS.");return;}
         saveProject();setBusy(true);setStatus("LOCAL RENDER — preparing on-device H.264 encoder…");
         new Thread(()->{File downloads=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);File target=new File(downloads,"GIKOKO-LOCAL-"+System.currentTimeMillis()+".mp4");try{
             LocalRenderEngine.render(project,target,seconds,resolution,ratio,fps,(done,total,stage)->{if(done%Math.max(1,fps*2)==0||done==total)setStatus(stage+" — "+(done*100/Math.max(1,total))+"% ("+done+"/"+total+" frames)");});
