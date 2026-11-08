@@ -123,12 +123,12 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(190));hp.bottomMargin=dp(16);root.addView(hero,hp);
         CyberGridView heroGrid=new CyberGridView(this);hero.addView(heroGrid,new FrameLayout.LayoutParams(-1,-1));
         LinearLayout brand=column();brand.setGravity(Gravity.CENTER);FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams(-1,-1);hero.addView(brand,bp);
-        TextView logo=new TextView(this);logo.setText("G.I");logo.setTextColor(0xffc7fff0);logo.setTextSize(52);
-        logo.setTypeface(Typeface.create("sans-serif-black",Typeface.BOLD));logo.setGravity(Gravity.CENTER);
-        logo.setShadowLayer(dp(18),0,0,0xff00e6ad);brand.addView(logo);
+        ImageView logo=new ImageView(this);logo.setImageResource(R.drawable.ic_launcher);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);logo.setElevation(dp(12));
+        brand.addView(logo,new LinearLayout.LayoutParams(dp(88),dp(88)));
         android.animation.ValueAnimator pulse=android.animation.ValueAnimator.ofFloat(0.96f,1.045f);
         pulse.setDuration(1900);pulse.setRepeatCount(android.animation.ValueAnimator.INFINITE);pulse.setRepeatMode(android.animation.ValueAnimator.REVERSE);
-        pulse.addUpdateListener(a->{float v=(Float)a.getAnimatedValue();logo.setScaleX(v);logo.setScaleY(v);});pulse.start();
+        pulse.addUpdateListener(a->{float v=(Float)a.getAnimatedValue();logo.setScaleX(v);logo.setScaleY(v);logo.setRotationY((v-1f)*220f);});pulse.start();
         TextView appName=label("KO KO  •  ViD GEN",15);appName.setGravity(Gravity.CENTER);appName.setTextColor(0xffe9fbff);
         appName.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));brand.addView(appName);
         TextView credit=label("3D CREATIVE STUDIO   /   POWERED BY I KO KO",9);credit.setGravity(Gravity.CENTER);
