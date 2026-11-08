@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""G.I KO KO audio/subtitle post-production for rendered scene segments."""
-import argparse, asyncio, json, os, subprocess, sys, time
+"""G.I KO KO audio/subtitle post-production with Gemini TTS primary and Edge TTS fallback."""
+import argparse, asyncio, base64, json, os, subprocess, sys, time
 from pathlib import Path
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 def run(cmd):
     subprocess.run(cmd, check=True)
@@ -10,17 +12,78 @@ def stamp(seconds):
     ms=max(0,int(seconds*1000)); h,ms=divmod(ms,3600000); m,ms=divmod(ms,60000); s,ms=divmod(ms,1000)
     return f"{h:02}:{m:02}:{s:02},{ms:03}"
 
-async def make_tts(text, voice, target):
+def gemini_tts(text, voice, target):
+    api_key=os.environ.get("GEMINI_API_KEY","").strip()
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not configured")
+    model=os.environ.get("GEMINI_TTS_MODEL","gemini-3.8-flash-tts").strip()
+    style=("Speak naturally and clearly. Use fluent Burmese pronunciation." if voice=="Kore"
+           else "Speak natural, clear American English with expressive but controlled delivery.")
+    payload={
+        "model":model,
+        "input":[{
+            "type":"user_input",
+            "content":[{
+                "type":"text",
+                "text":text,
+                "annotations":[{"type":"speech_metadata","style":style}]
+            }]
+        }],
+        "response_format":{"type":"audio"},
+        "generation_config":{"speech_config":[{"voice":voice}]}
+    }
+    request=Request(
+        "https://generativelanguage.googleapis.com/v1beta/interactions",
+        data=json.dumps(payload,ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type":"application/json","x-goog-api-key":api_key},
+        method="POST"
+    )
+    with urlopen(request,timeout=120) as response:
+        result=json.loads(response.read().decode("utf-8"))
+    audio=(result.get("output_audio") or {}).get("data")
+    if not audio:
+        raise RuntimeError("Gemini TTS response did not contain output_audio.data")
+    audio_bytes=base64.b64decode(audio,validate=True)
+    if len(audio_bytes)<1000 or not audio_bytes.startswith(b"RIFF"):
+        raise RuntimeError("Gemini TTS returned an invalid or unexpectedly short WAV file")
+    target.write_bytes(audio_bytes)
+
+async def edge_tts_fallback(text, voice, target):
     import edge_tts
+    edge_voice="my-MM-ThihaNeural" if voice=="Kore" else "en-US-GuyNeural"
+    mp3_target=target.with_suffix(".mp3")
+    await edge_tts.Communicate(text,edge_voice).save(str(mp3_target))
+    if not mp3_target.exists() or mp3_target.stat().st_size<500:
+        raise RuntimeError("Edge TTS returned an empty audio file")
+    return mp3_target
+
+async def make_tts(text, voice, target):
+    provider=os.environ.get("TTS_PROVIDER","auto").strip().lower()
+    use_gemini=provider in ("auto","gemini") and bool(os.environ.get("GEMINI_API_KEY","").strip())
+    if provider=="gemini" and not os.environ.get("GEMINI_API_KEY","").strip():
+        raise RuntimeError("TTS_PROVIDER=gemini but GEMINI_API_KEY is missing")
     last=None
-    for attempt in range(3):
-        try:
-            await edge_tts.Communicate(text, voice).save(str(target))
-            if target.exists() and target.stat().st_size>500: return
-        except Exception as exc:
-            last=exc
-            await asyncio.sleep(2*(attempt+1))
-    raise RuntimeError(f"Edge TTS failed for voice {voice}: {last}")
+    if use_gemini:
+        for attempt in range(3):
+            try:
+                gemini_tts(text,voice,target)
+                print(f"TTS_PROVIDER=Gemini model={os.environ.get('GEMINI_TTS_MODEL','gemini-3.8-flash-tts')} voice={voice}")
+                return target
+            except Exception as exc:
+                last=exc
+                print(f"Gemini TTS attempt {attempt+1}/3 failed: {type(exc).__name__}: {exc}",file=sys.stderr)
+                await asyncio.sleep(2*(attempt+1))
+        if provider=="gemini":
+            raise RuntimeError(f"Gemini TTS failed after 3 attempts: {last}")
+        print("Gemini TTS unavailable; falling back to Edge TTS.",file=sys.stderr)
+    try:
+        result=await edge_tts_fallback(text,voice,target)
+        print(f"TTS_PROVIDER=Edge fallback voice={voice}")
+        return result
+    except Exception as exc:
+        if last:
+            raise RuntimeError(f"Gemini TTS failed ({last}); Edge TTS fallback failed ({exc})") from exc
+        raise
 
 def main():
     ap=argparse.ArgumentParser()
@@ -43,9 +106,9 @@ def main():
                 caption=my or en
                 if caption: entries.append((start,end,caption))
             if "English" in voice_mode or "Bilingual" in voice_mode:
-                if en: speech.append((start,en,"en-US-GuyNeural"))
+                if en: speech.append((start,en,"Puck"))
             if "Myanmar" in voice_mode or "Bilingual" in voice_mode:
-                if my: speech.append((start+(min(1.5,slot*.35) if "Bilingual" in voice_mode else 0.0),my,"my-MM-ThihaNeural"))
+                if my: speech.append((start+(min(1.5,slot*.35) if "Bilingual" in voice_mode else 0.0),my,"Kore"))
     if subtitles:
         with srt.open("w",encoding="utf-8") as f:
             for i,(a,b,text) in enumerate(entries,1):
@@ -57,14 +120,13 @@ def main():
     if speech:
         async def synth():
             for i,(start,text,voice) in enumerate(speech):
-                target=work/f"voice_{i:03}.mp3"
-                await make_tts(text,voice,target)
-                voice_files.append((start,target))
+                target=work/f"voice_{i:03}.wav"
+                actual=await make_tts(text,voice,target)
+                voice_files.append((start,actual))
         asyncio.run(synth())
 
     inputs=[];filters=[];mix=[]
     if music:
-        # Original synthesized soft chord bed; no third-party music assets.
         music_expr="0.012*sin(2*PI*196*t)+0.010*sin(2*PI*246.94*t)+0.008*sin(2*PI*293.66*t)"
         run(["ffmpeg","-y","-loglevel","error","-f","lavfi","-i",f"aevalsrc={music_expr}:s=48000:d={duration}","-af",f"afade=t=in:st=0:d=2,afade=t=out:st={max(0,duration-3)}:d=3","-c:a","pcm_s16le",str(work/"music.wav")])
         inputs += ["-i",str(work/"music.wav")]
@@ -80,7 +142,6 @@ def main():
         filters.append(f"[{idx}:a]adelay={delay}|{delay},volume=1.0[v{i}]")
         mix.append(f"[v{i}]")
     if sfx:
-        # Short original per-scene impact accents, generated from a low sine oscillator.
         sfx_path=work/"sfx.wav"
         period=max(3,duration/max(1,len(project.get("scenes") or [1])))
         expr=f"0.025*sin(2*PI*82*t)*exp(-mod(t\\,{period})*6)"
