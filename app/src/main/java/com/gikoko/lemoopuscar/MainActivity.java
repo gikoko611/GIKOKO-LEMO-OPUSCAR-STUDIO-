@@ -51,7 +51,8 @@ public class MainActivity extends Activity {
     private static final String RUN_KEY="last_run_id";
     private final Handler main=new Handler(Looper.getMainLooper());
     private EditText tokenInput,aiBaseInput,aiModelInput,aiKeyInput,titleInput,promptInput,characterInput,sceneInput,dialogueInput;
-    private Spinner styleSpinner,durationSpinner,resolutionSpinner;
+    private Spinner styleSpinner,durationSpinner,resolutionSpinner,aspectRatioSpinner,frameRateSpinner,renderModeSpinner,localDurationSpinner,themeSpinner;
+    private EditText watermarkInput;
     private TextView status;
     private Button startButton,saveButton,checkButton,downloadButton,retryButton;
     private Spinner voiceSpinner;
@@ -59,6 +60,7 @@ public class MainActivity extends Activity {
     private String token;
     private String animationCode="";
     private boolean busy=false,pendingStart=false;
+    private int themeBg=0xff09091b,themeCard=0xff17152b,themeBorder=0xff7158b8,themeAccent=0xff8be9ff,themeText=0xfff1efff,themeMuted=0xffaaa6c8,themeButtonA=0xff6b3de6,themeButtonB=0xffd14aa8;
     private static final String DIAGNOSTIC_FILE="diagnostic.log";
 
     @Override public void onCreate(Bundle b){
@@ -66,17 +68,23 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(Color.rgb(8,11,18));
         getWindow().setNavigationBarColor(Color.rgb(8,11,18));
         token=loadToken();
+        applyThemeFromName(prefs().getString("ui_theme","NEBULA PRISM"));
         installCrashLogger();
         buildUi();
     }
 
+    private void applyThemeFromName(String name){
+        if("OBSIDIAN LUX".equals(name)){themeBg=0xff080b10;themeCard=0xff171c24;themeBorder=0xffb38a4a;themeAccent=0xffe8c77a;themeText=0xfff4f0e6;themeMuted=0xffaaa18e;themeButtonA=0xff8b6a34;themeButtonB=0xffc8a85c;}
+        else if("AURORA GLASS".equals(name)){themeBg=0xff07131d;themeCard=0xff102637;themeBorder=0xff36b8c6;themeAccent=0xff8fe7ff;themeText=0xffe9faff;themeMuted=0xff94b8c9;themeButtonA=0xff167aab;themeButtonB=0xff7157d8;}
+        else {themeBg=0xff09091b;themeCard=0xff17152b;themeBorder=0xff7158b8;themeAccent=0xff8be9ff;themeText=0xfff1efff;themeMuted=0xffaaa6c8;themeButtonA=0xff6b3de6;themeButtonB=0xffd14aa8;}
+    }
     private int dp(float v){return (int)(v*getResources().getDisplayMetrics().density+0.5f);}
     private android.graphics.drawable.GradientDrawable shape(int fill,int stroke,int radius){
         android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable();
         d.setColor(fill);d.setCornerRadius(dp(radius));if(stroke!=0)d.setStroke(dp(1),stroke);return d;
     }
     private TextView label(String s,int size){
-        TextView v=new TextView(this);v.setText(s);v.setTextColor(0xffd9f7ff);v.setTextSize(size);
+        TextView v=new TextView(this);v.setText(s);v.setTextColor(themeText);v.setTextSize(size);
         v.setPadding(0,dp(8),0,dp(5));return v;
     }
     private Spinner spinner(String[] values){
@@ -92,7 +100,7 @@ public class MainActivity extends Activity {
         b.setTextSize(13);b.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));
         b.setBackground(new android.graphics.drawable.GradientDrawable(
             android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-            new int[]{0xff087d79,0xff0755a8}));
+            new int[]{themeButtonA,themeButtonB}));
         b.setPadding(dp(12),dp(8),dp(12),dp(8));b.setElevation(dp(4));return b;
     }
     private LinearLayout column(){
@@ -100,11 +108,11 @@ public class MainActivity extends Activity {
     }
     private LinearLayout card(LinearLayout parent){
         LinearLayout c=column();c.setPadding(dp(16),dp(13),dp(16),dp(15));
-        c.setBackground(shape(0xee101d2b,0xff1d6570,18));c.setElevation(dp(5));
+        c.setBackground(shape(themeCard,themeBorder,20));c.setElevation(dp(5));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(13);parent.addView(c,lp);return c;
     }
     private void heading(LinearLayout box,String text,String hint){
-        TextView t=label(text,16);t.setTextColor(0xff62f5c5);t.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));box.addView(t);
+        TextView t=label(text,16);t.setTextColor(themeAccent);t.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));box.addView(t);
         if(hint!=null&&!hint.isEmpty()){TextView h=label(hint,11);h.setTextColor(0xff8daab8);h.setPadding(0,0,0,dp(7));box.addView(h);}
     }
     private void buildUi(){
@@ -112,7 +120,7 @@ public class MainActivity extends Activity {
         FrameLayout shell=new FrameLayout(this);
         shell.setBackground(new android.graphics.drawable.GradientDrawable(
             android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-            new int[]{0xff050b14,0xff0a1724,0xff07101b}));
+            new int[]{themeBg,themeCard,themeBg}));
         CyberGridView grid=new CyberGridView(this);shell.addView(grid,new FrameLayout.LayoutParams(-1,-1));
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);
         LinearLayout root=column();root.setPadding(dp(18),dp(14),dp(18),dp(30));scroll.addView(root);
@@ -120,7 +128,7 @@ public class MainActivity extends Activity {
 
         FrameLayout hero=new FrameLayout(this);hero.setBackground(new android.graphics.drawable.GradientDrawable(
             android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-            new int[]{0xff123c4a,0xff10244b,0xff071321}));
+            new int[]{themeButtonA,themeCard,themeBg}));
         hero.setElevation(dp(8));hero.setPadding(dp(18),dp(20),dp(18),dp(18));
         LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(190));hp.bottomMargin=dp(16);root.addView(hero,hp);
         CyberGridView heroGrid=new CyberGridView(this);hero.addView(heroGrid,new FrameLayout.LayoutParams(-1,-1));
@@ -228,7 +236,7 @@ public class MainActivity extends Activity {
         EditText e=new EditText(this);e.setText(value);e.setHint(hint);e.setTextColor(0xffeffaff);e.setHintTextColor(0xff7693a2);
         e.setTextSize(14);e.setSingleLine(!hint.toLowerCase(Locale.US).contains("prompt")&&!hint.toLowerCase(Locale.US).contains("bible")&&!hint.toLowerCase(Locale.US).contains("outline")&&!hint.toLowerCase(Locale.US).contains("dialogue"));
         e.setInputType(secret?(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD):(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES));
-        e.setPadding(dp(13),dp(11),dp(13),dp(11));e.setBackground(shape(0xff0a1722,0xff24586a,12));
+        e.setPadding(dp(13),dp(11),dp(13),dp(11));e.setBackground(shape(themeBg,themeBorder,14));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(5);lp.bottomMargin=dp(8);e.setLayoutParams(lp);return e;
     }
     private static class CyberGridView extends View{
