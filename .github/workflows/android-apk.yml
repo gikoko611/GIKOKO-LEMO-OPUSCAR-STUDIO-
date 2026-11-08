@@ -9,6 +9,7 @@ on:
       - "scripts/**"
       - ".github/workflows/android-apk.yml"
       - ".github/workflows/cloud-render.yml"
+      - ".github/workflows/story-assist.yml"
 permissions:
   contents: write
 
