@@ -177,7 +177,7 @@ jobs:
               -i output/video_silent.mp4 -i output/audio.wav -i output/audio.srt \
               -map 0:v:0 -map 1:a:0 -map 2:s:0 \
               -c:v copy -c:a aac -b:a 160k -c:s mov_text \
-              -metadata:s:s:0 language=bur -movflags +faststart \
+              -metadata:s:s:0 language=mul -metadata:s:s:0 title="English + Myanmar" -movflags +faststart \
               "output/GI-KO-KO-VID-GEN-${{ inputs.style }}-${{ inputs.duration }}min-${{ inputs.resolution }}-${{ inputs.request_id }}.mp4"
           else
             ffmpeg -y -hide_banner -loglevel error \
