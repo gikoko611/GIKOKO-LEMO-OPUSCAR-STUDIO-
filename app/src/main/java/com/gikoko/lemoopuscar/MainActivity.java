@@ -156,6 +156,13 @@ public class MainActivity extends Activity {
         Button send=button("➤  SEND TO AI DIRECTOR");chat.addView(send,new LinearLayout.LayoutParams(-1,dp(50)));
         send.setOnClickListener(v->{String m=promptInput.getText().toString().trim();if(m.isEmpty()){setStatus("Write a story idea first.");return;}appendChatMessage("YOU",m);assistStory();});
 
+        LinearLayout tools=card(root);heading(tools,"STUDIO TOOLKIT","10 focused tools for story prep, finishing and cloud delivery.");
+        addToolRow(tools,R.drawable.ic_tool_templates,"STARTER TEMPLATES","10 ready-to-edit film blueprints",()->openTemplateGallery(),R.drawable.ic_tool_character,"CHARACTER LAB","Build a consistent character bible",()->openCharacterBuilder());
+        addToolRow(tools,R.drawable.ic_tool_dialogue,"DIALOGUE DESK","Edit English + Myanmar lines",()->openDialogueBuilder(),R.drawable.ic_tool_subtitles,"SUBTITLE PREVIEW","Preview bilingual captions",()->previewSubtitles());
+        addToolRow(tools,R.drawable.ic_tool_audio,"AUDIO LAB","Voice, music and sound effects",()->openAudioLab(),R.drawable.ic_tool_cloud,"CLOUD QUEUE","Check render status and logs",()->{checkLastRun();openRenderCenter();});
+        addToolRow(tools,R.drawable.ic_tool_projects,"PROJECT LIBRARY","Open saved projects and drafts",()->openProjectLibrary(),R.drawable.ic_tool_brand,"BRAND KIT","Logo and watermark controls",()->openBrandKit());
+        addToolRow(tools,R.drawable.ic_tool_ratio,"FORMAT PRESETS","Portrait, landscape and square",()->openFormatPresets(),R.drawable.ic_tool_diagnostics,"DIAGNOSTICS","Copy or export technical logs",()->showDiagnosticCenter());
+
         LinearLayout project=card(root);heading(project,"02  /  PROJECT DETAILS","Keep the title, character identity and scene continuity in one place.");
         titleInput=edit("The Golden Kingdom","Project title",false);project.addView(titleInput);
         characterInput=edit("Main character: a clever but clumsy royal guard. Keep costume, face, colors and personality consistent in every scene.","Character Bible — consistent look and personality",false);characterInput.setMinLines(3);project.addView(characterInput);
@@ -174,7 +181,7 @@ public class MainActivity extends Activity {
         config.addView(label("VOICE-OVER",11));voiceSpinner=spinner(new String[]{"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"});config.addView(voiceSpinner);
         musicCheck=new CheckBox(this);musicCheck.setText("Background music");musicCheck.setTextColor(themeText);musicCheck.setChecked(true);config.addView(musicCheck);
         sfxCheck=new CheckBox(this);sfxCheck.setText("Sound effects");sfxCheck.setTextColor(themeText);sfxCheck.setChecked(true);config.addView(sfxCheck);
-        subtitleCheck=new CheckBox(this);subtitleCheck.setText("Myanmar subtitle track");subtitleCheck.setTextColor(themeText);subtitleCheck.setChecked(true);config.addView(subtitleCheck);
+        subtitleCheck=new CheckBox(this);subtitleCheck.setText("Bilingual subtitles  •  English + Myanmar");subtitleCheck.setTextColor(themeText);subtitleCheck.setChecked(true);config.addView(subtitleCheck);
         watermarkInput=edit("POWERED BY I KO KO","Watermark text",false);config.addView(watermarkInput);
         Button addLogo=button("＋  ADD BRAND LOGO");config.addView(addLogo);addLogo.setOnClickListener(v->pickWatermarkLogo());
 
@@ -263,13 +270,83 @@ public class MainActivity extends Activity {
             JSONArray dialogue=new JSONArray();for(String line:dialogueInput.getText().toString().split("\n"))if(!line.trim().isEmpty()){
                 String[] parts=line.split("\\|",2);JSONObject d=new JSONObject();d.put("english",parts[0].trim());d.put("myanmar",parts.length>1?parts[1].trim():"");dialogue.put(d);
             }p.put("dialogue",dialogue);
-            p.put("voice",voiceSpinner.getSelectedItem().toString());p.put("background_music",musicCheck.isChecked());p.put("sfx",sfxCheck.isChecked());p.put("myanmar_subtitles",subtitleCheck.isChecked());
+            p.put("voice",voiceSpinner.getSelectedItem().toString());p.put("background_music",musicCheck.isChecked());p.put("sfx",sfxCheck.isChecked());p.put("bilingual_subtitles",subtitleCheck.isChecked());p.put("myanmar_subtitles",subtitleCheck.isChecked());
             p.put("style",styleSpinner.getSelectedItem().toString());p.put("duration_minutes",durationSpinner.getSelectedItem().toString());p.put("resolution",resolutionSpinner.getSelectedItem().toString());
             p.put("aspect_ratio",aspectRatioSpinner==null?"16:9":aspectRatioSpinner.getSelectedItem().toString());
             p.put("fps",frameRateSpinner==null?"24":frameRateSpinner.getSelectedItem().toString());
             p.put("watermark",watermarkInput==null?"POWERED BY I KO KO":watermarkInput.getText().toString().trim());
             if(!watermarkLogoBase64.isEmpty())p.put("watermark_logo_base64",watermarkLogoBase64);
         }catch(Exception ignored){}return p;
+    }
+
+
+    private void addToolRow(LinearLayout parent,int iconA,String titleA,String descA,Runnable actionA,int iconB,String titleB,String descB,Runnable actionB){
+        LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);rp.topMargin=dp(5);rp.bottomMargin=dp(5);parent.addView(row,rp);
+        row.addView(toolTile(iconA,titleA,descA,actionA),new LinearLayout.LayoutParams(0,dp(94),1));
+        View gap=new View(this);row.addView(gap,new LinearLayout.LayoutParams(dp(8),1));
+        row.addView(toolTile(iconB,titleB,descB,actionB),new LinearLayout.LayoutParams(0,dp(94),1));
+    }
+    private View toolTile(int icon,String title,String description,Runnable action){
+        LinearLayout tile=new LinearLayout(this);tile.setGravity(Gravity.CENTER_VERTICAL);tile.setOrientation(LinearLayout.HORIZONTAL);tile.setPadding(dp(9),dp(8),dp(7),dp(8));tile.setBackground(shape(0xff0b1c29,0xff205064,14));tile.setMinimumHeight(dp(88));tile.setClickable(true);tile.setFocusable(true);
+        ImageView image=new ImageView(this);image.setImageResource(icon);image.setScaleType(ImageView.ScaleType.FIT_CENTER);tile.addView(image,new LinearLayout.LayoutParams(dp(34),dp(34)));
+        LinearLayout copy=column();LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1);cp.leftMargin=dp(7);tile.addView(copy,cp);
+        TextView t=label(title,10);t.setTextColor(0xff72e9d0);t.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));copy.addView(t);
+        TextView d=label(description,9);d.setTextColor(0xffa6bdc9);d.setMaxLines(2);copy.addView(d);
+        tile.setOnClickListener(v->{try{action.run();}catch(Exception e){setStatus("Tool error: "+e.getMessage());}});return tile;
+    }
+    private String[][] starterTemplates(){
+        return new String[][]{
+            {"MYANMAR PALACE COMEDY","A fast-paced historical comedy inside an ancient Myanmar royal palace. Include a clever but clumsy royal guard, a proud king, visual gags, a chase and a warm comic twist.","A loyal royal guard in emerald-and-gold armour, same face and costume in every scene; clever, nervous and kind.","Palace gate — the guard makes a grand entrance\nThrone room — the king gives a strange order\nRoyal kitchen — a runaway feast causes chaos\nPalace courtyard — the guard saves the day by accident","Guard: I have everything under control. | အားလုံးကို ကျွန်တော် ထိန်းချုပ်ထားပါတယ်။\nKing: Then why is the royal goose wearing my crown? | ဒါဆို တော်ဝင်ငန်းက ဘာလို့ ကျွန်တော့်သရဖူကို ဆောင်းထားတာလဲ။","cartoon3d","5"},
+            {"MYANMAR FOLK TALE","Retell a Myanmar-inspired folk tale with a moral lesson, magical atmosphere, kind humour and family-friendly scenes. Keep all character designs consistent.","A brave village child with a simple traditional outfit, warm expressive face and a small woven shoulder bag.","Village morning — introduce the hero\nForest path — discover a mysterious clue\nRiverbank — meet a magical helper\nVillage festival — resolve the problem and share the lesson","Child: I will help you. | ကူညီပေးပါမယ်။\nSpirit: Kindness is stronger than fear. | ကြင်နာမှုက ကြောက်ရွံ့မှုထက် ပိုအားကောင်းတယ်။","cartoon2d","5"},
+            {"ACTION ADVENTURE","Create a cinematic action-adventure short with a clear mission, escalating obstacles, safe non-graphic action and a satisfying final reveal.","A young explorer in a navy utility jacket, orange backpack and short dark hair; maintain the same look throughout.","Mission briefing — reveal the objective\nJungle trail — first obstacle\nAncient bridge — high-stakes escape\nHidden chamber — final discovery","Explorer: We have one chance. | ကျွန်တော်တို့မှာ အခွင့်အရေးတစ်ခုပဲ ရှိတယ်။\nPartner: Then let's make it count. | ဒါဆို အဲဒီအခွင့်အရေးကို အကောင်းဆုံးအသုံးချကြစို့။","cinematic","5"},
+            {"RURAL MYSTERY","Build a gentle suspense mystery in a Myanmar village. Use clues, atmosphere and clever deduction without horror or graphic violence.","A curious village investigator wearing a light blue shirt, dark longyi and carrying a small notebook.","Quiet village lane — a strange sound at night\nTea shop — collect witness clues\nOld monastery path — discover a footprint\nVillage pond — reveal the harmless truth","Investigator: Every clue matters. | သဲလွန်စတိုင်းက အရေးကြီးတယ်။\nWitness: I heard it near the pond. | ရေကန်နားက အသံကို ကြားခဲ့တာပါ။","hybrid","5"},
+            {"KIDS ANIMAL FABLE","Create a colourful family-friendly animal story about teamwork, honesty and friendship. Use expressive characters and gentle comedy.","A small golden-brown rabbit with a green scarf; keep its proportions, scarf and facial features consistent.","Meadow — introduce the rabbit\nForest — meet a shy turtle\nHill path — solve a teamwork challenge\nSunny clearing — celebrate friendship","Rabbit: We can do it together. | အတူတူလုပ်ရင် လုပ်နိုင်ပါတယ်။\nTurtle: Slow steps still move forward. | ဖြည်းဖြည်းသွားလည်း ရှေ့ကိုရောက်ပါတယ်။","cartoon2d","5"},
+            {"TRAVEL MINI DOCUMENTARY","Create a short travel documentary about a beautiful Myanmar destination. Use respectful factual narration, scenic establishing shots and concise captions; do not invent specific facts.","A friendly travel host wearing a neutral outdoor jacket and carrying a compact camera.","Opening aerial-style establishing scene\nLocal street and daily life\nFood and craft close-ups\nGolden-hour scenic closing","Host: Let's explore this beautiful place. | ဒီလှပတဲ့နေရာကို အတူလေ့လာကြရအောင်။\nHost: Every journey has a story. | ခရီးစဉ်တိုင်းမှာ ဇာတ်လမ်းတစ်ပုဒ်ရှိပါတယ်။","cinematic","5"},
+            {"PRODUCT SHOWCASE","Create a polished product promo with premium lighting, clean close-ups, feature callouts and a clear final call to action. Avoid unsupported product claims.","A clean premium product hero shot with consistent shape, colours, material and logo placement across all scenes.","Hero reveal — premium opening\nDetail macro — highlight craftsmanship\nFeature scene — demonstrate one benefit\nClosing frame — brand and call to action","Narrator: Designed for your everyday. | နေ့စဉ်အသုံးပြုမှုအတွက် ဒီဇိုင်းထုတ်ထားသည်။\nNarrator: Discover the difference. | ကွာခြားချက်ကို ကိုယ်တိုင်ရှာဖွေကြည့်ပါ။","cinematic","1"},
+            {"MOTIVATIONAL SHORT","Create an uplifting motivational short with a clear emotional arc, practical message and hopeful ending. Keep the voice calm and authentic.","A young creator in a simple charcoal hoodie, consistent appearance and natural expressions.","Quiet beginning — face a challenge\nSmall action — take the first step\nSetback — learn and adapt\nSunrise ending — show progress","Narrator: Start before you feel ready. | အဆင်သင့်ဖြစ်မယ်လို့ မစောင့်ဘဲ စတင်လိုက်ပါ။\nNarrator: Small steps build big change. | ခြေလှမ်းသေးသေးလေးတွေက အပြောင်းအလဲကြီးကို တည်ဆောက်ပေးတယ်။","hybrid","1"},
+            {"MUSIC VIDEO VISUALIZER","Create a rhythmic music-video visual sequence with beat-synced transitions, striking colours and a consistent central performer. Do not reproduce copyrighted lyrics.","A solo performer in a black-and-teal stage outfit, same hairstyle and costume throughout.","Opening silhouette — reveal performer\nVerse mood — atmospheric close-ups\nChorus energy — dynamic stage lights\nFinal beat — memorable closing pose","Performer: Feel the rhythm tonight. | ဒီညရဲ့ စည်းချက်ကို ခံစားလိုက်ပါ။\nPerformer: Let the moment shine. | ဒီအချိန်လေးကို တောက်ပစေပါ။","cartoon3d","1"},
+            {"MOVIE RECAP NARRATION","Create a concise, original recap-style narration from user-provided plot notes. Summarize events in your own words, preserve chronology and avoid reproducing dialogue from the source film.","A neutral cinematic narrator; use consistent visual motifs and avoid depicting real actors as exact copies.","Opening — introduce the premise\nSetup — explain the key characters\nTurning point — describe the central conflict\nClimax and ending — summarize the resolution","Narrator: Everything changes after one unexpected decision. | မမျှော်လင့်ထားတဲ့ ဆုံးဖြတ်ချက်တစ်ခုနောက်မှာ အရာအားလုံး ပြောင်းလဲသွားတယ်။\nNarrator: Now the truth comes to light. | အခုတော့ အမှန်တရား ပေါ်လာပါပြီ။","cinematic","5"}
+        };
+    }
+    private void openTemplateGallery(){
+        String[][] templates=starterTemplates();String[] names=new String[templates.length];
+        for(int i=0;i<templates.length;i++)names[i]="✦  "+templates[i][0];
+        new android.app.AlertDialog.Builder(this).setTitle("STARTER TEMPLATE LIBRARY").setItems(names,(d,which)->{
+            String[] t=templates[which];promptInput.setText(t[1]);titleInput.setText(t[0]);characterInput.setText(t[2]);sceneInput.setText(t[3]);dialogueInput.setText(t[4]);
+            setSpinnerValue(styleSpinner,t[5]);setSpinnerValue(durationSpinner,t[6]);setStatus("Template loaded: "+t[0]+". Edit any section before cloud generation.");saveProject();
+        }).setNegativeButton("CLOSE",null).show();
+    }
+    private void openCharacterBuilder(){
+        EditText input=edit(characterInput.getText().toString(),"Describe the character's appearance, outfit, colours, personality and continuity rules.",false);input.setMinLines(5);
+        new android.app.AlertDialog.Builder(this).setTitle("CHARACTER CONTINUITY LAB").setMessage("Keep the same face, body proportions, outfit, palette and personality in every scene.").setView(input).setPositiveButton("APPLY",(d,w)->{characterInput.setText(input.getText().toString());saveProject();}).setNegativeButton("CANCEL",null).show();
+    }
+    private void openDialogueBuilder(){
+        EditText input=edit(dialogueInput.getText().toString(),"English line | Myanmar translation",false);input.setMinLines(7);
+        new android.app.AlertDialog.Builder(this).setTitle("BILINGUAL DIALOGUE DESK").setMessage("One dialogue turn per line. Format: English sentence | မြန်မာဘာသာပြန်").setView(input).setPositiveButton("APPLY",(d,w)->{dialogueInput.setText(input.getText().toString());saveProject();}).setNegativeButton("CANCEL",null).show();
+    }
+    private void previewSubtitles(){
+        StringBuilder preview=new StringBuilder();String[] lines=dialogueInput.getText().toString().split("\\n");
+        for(String line:lines){String[] p=line.split("\\|",2);if(p.length>0&&!p[0].trim().isEmpty())preview.append(p[0].trim()).append("\\n");if(p.length>1&&!p[1].trim().isEmpty())preview.append(p[1].trim()).append("\\n");preview.append("\\n");}
+        TextView view=label(preview.length()==0?"No dialogue yet. Add English and Myanmar lines in Dialogue Desk.":preview.toString(),14);view.setTextColor(0xffeffaff);view.setPadding(dp(14),dp(14),dp(14),dp(14));view.setBackground(shape(0xff071923,0xff1d6471,14));
+        ScrollView scroll=new ScrollView(this);scroll.addView(view);
+        new android.app.AlertDialog.Builder(this).setTitle("SUBTITLE PREVIEW  /  EN + MY").setView(scroll).setPositiveButton("DONE",null).show();
+    }
+    private void openAudioLab(){
+        String[] voices={"No voice-over","English voice-over","Myanmar voice-over","Bilingual voice-over"};
+        new android.app.AlertDialog.Builder(this).setTitle("AUDIO LAB").setSingleChoiceItems(voices,Math.max(0,java.util.Arrays.asList(voices).indexOf(voiceSpinner.getSelectedItem().toString())),(d,w)->voiceSpinner.setSelection(w))
+            .setMultiChoiceItems(new String[]{"Background music","Sound effects"},new boolean[]{musicCheck.isChecked(),sfxCheck.isChecked()},(d,w,checked)->{if(w==0)musicCheck.setChecked(checked);else sfxCheck.setChecked(checked);})
+            .setPositiveButton("APPLY",(d,w)->saveProject()).setNegativeButton("CLOSE",null).show();
+    }
+    private void openBrandKit(){
+        EditText watermark=edit(watermarkInput.getText().toString(),"Watermark text",false);
+        new android.app.AlertDialog.Builder(this).setTitle("BRAND KIT").setMessage("Add your own logo and a consistent studio watermark.").setView(watermark)
+            .setPositiveButton("SAVE TEXT",(d,w)->{watermarkInput.setText(watermark.getText().toString());saveProject();})
+            .setNeutralButton("IMPORT LOGO",(d,w)->pickWatermarkLogo()).setNegativeButton("CANCEL",null).show();
+    }
+    private void openFormatPresets(){
+        String[] formats={"Landscape 16:9 — YouTube","Portrait 9:16 — Reels / Shorts / TikTok","Square 1:1 — Feed","Portrait 4:5 — Social feed"};
+        String[] ratios={"16:9","9:16","1:1","4:5"};
+        new android.app.AlertDialog.Builder(this).setTitle("FORMAT PRESETS").setItems(formats,(d,w)->{setSpinnerValue(aspectRatioSpinner,ratios[w]);setStatus("Output format set to "+ratios[w]+". Save draft or render when ready.");}).setNegativeButton("CLOSE",null).show();
     }
 
     private void openProjectLibrary(){
@@ -324,7 +401,7 @@ public class MainActivity extends Activity {
             animationCode=p.optString("animation_code","");
             watermarkLogoBase64=p.optString("watermark_logo_base64",prefs().getString("watermark_logo_base64",""));
             JSONArray ds=p.optJSONArray("dialogue");if(ds!=null){StringBuilder b=new StringBuilder();for(int i=0;i<ds.length();i++){JSONObject d=ds.getJSONObject(i);b.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}dialogueInput.setText(b.toString());}
-            musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("myanmar_subtitles",true));
+            musicCheck.setChecked(p.optBoolean("background_music",true));sfxCheck.setChecked(p.optBoolean("sfx",true));subtitleCheck.setChecked(p.optBoolean("bilingual_subtitles",p.optBoolean("myanmar_subtitles",true)));
             setSpinnerValue(styleSpinner,p.optString("style","cartoon2d"));setSpinnerValue(durationSpinner,p.optString("duration_minutes","1"));setSpinnerValue(resolutionSpinner,p.optString("resolution","480p"));setSpinnerValue(voiceSpinner,p.optString("voice","No voice-over"));
             if(aspectRatioSpinner!=null)setSpinnerValue(aspectRatioSpinner,p.optString("aspect_ratio","16:9"));
             if(frameRateSpinner!=null)setSpinnerValue(frameRateSpinner,p.optString("fps","24"));
