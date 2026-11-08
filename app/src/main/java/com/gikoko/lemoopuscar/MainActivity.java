@@ -331,33 +331,102 @@ public class MainActivity extends Activity {
             if(watermarkInput!=null)watermarkInput.setText(p.optString("watermark","POWERED BY I KO KO"));
         }catch(Exception ignored){}
     }
+
     private void assistStory(){
         if(busy)return;
-        String prompt=promptInput.getText().toString().trim();
+        final String prompt=promptInput.getText().toString().trim();
         if(prompt.isEmpty()){setStatus("Enter a film idea first.");return;}
-        setBusy(true);setStatus("AI Director: analyzing prompt and building storyboard…");
-        generationDialog=new android.app.ProgressDialog(this);generationDialog.setTitle("AI PROJECT GENERATION");generationDialog.setMessage("Connecting to selected AI provider…");generationDialog.setIndeterminate(true);generationDialog.setCancelable(false);generationDialog.show();
-        String aiPrompt=prompt+"\nTarget video duration: "+durationSpinner.getSelectedItem().toString()+" minutes. Visual style: "+styleSpinner.getSelectedItem().toString()+". For a 30-minute film, create a detailed long-form story with 18-30 scenes and 30-60 bilingual dialogue turns. Keep the same character appearance and personality throughout.";
-        new ProviderManager(this).generateStory(aiPrompt,(story,err,provider)->{
-            if(err!=null){
-                setBusy(false);if(generationDialog!=null){generationDialog.dismiss();generationDialog=null;}
-                appendChatMessage("AI DIRECTOR","Provider unavailable. I created a basic offline outline; connect a provider later for full AI story writing.");
-                setStatus("AI provider chain failed: "+err+" — using offline outline helper.");
-                offlineStoryAssist(prompt);
-                return;
+        if(token==null){
+            new ProviderManager(this).generateStory(prompt,(story,err,provider)->{
+                if(err!=null){appendChatMessage("AI DIRECTOR","No cloud GitHub token or saved custom provider is available. A basic offline outline was created.");offlineStoryAssist(prompt);return;}
+                applyStoryDraft(story,"device provider: "+provider);
+            });
+            return;
+        }
+        final String requestId=UUID.randomUUID().toString().replace("-","").substring(0,12);
+        final String duration=durationSpinner.getSelectedItem().toString();
+        final String style=styleSpinner.getSelectedItem().toString();
+        setBusy(true);setStatus("AI Director is preparing your storyboard with Gemini Cloud…");
+        generationDialog=new android.app.ProgressDialog(this);
+        generationDialog.setTitle("G.I KO KO  /  AI DIRECTOR");
+        generationDialog.setMessage("Sending your prompt to Gemini through GitHub Actions…");
+        generationDialog.setIndeterminate(true);generationDialog.setCancelable(false);generationDialog.show();
+        new Thread(()->{
+            try{
+                JSONObject inputs=new JSONObject();
+                inputs.put("request_id",requestId);inputs.put("prompt",prompt);inputs.put("duration",duration);inputs.put("style",style);
+                JSONObject payload=new JSONObject();payload.put("ref","main");payload.put("inputs",inputs);
+                ApiResponse dispatch=api("POST",API+"/actions/workflows/story-assist.yml/dispatches",token,payload.toString());
+                if(dispatch.code!=204)throw new Exception("Gemini story workflow dispatch failed (HTTP "+dispatch.code+"): "+dispatch.body);
+                JSONObject run=null;
+                for(int i=0;i<90;i++){
+                    Thread.sleep(5000);
+                    ApiResponse rr=api("GET",API+"/actions/workflows/story-assist.yml/runs?event=workflow_dispatch&per_page=30",token,null);
+                    if(rr.code!=200)throw new Exception("Could not find AI Director run (HTTP "+rr.code+"): "+rr.body);
+                    JSONArray runs=new JSONObject(rr.body).optJSONArray("workflow_runs");
+                    if(runs!=null)for(int j=0;j<runs.length();j++){
+                        JSONObject item=runs.getJSONObject(j);
+                        String display=item.optString("display_title",item.optString("name",""));
+                        if(display.contains(requestId)){run=item;break;}
+                    }
+                    if(run!=null)break;
+                }
+                if(run==null)throw new Exception("Gemini workflow was accepted, but its run ID was not found. Check GitHub Actions.");
+                long runId=run.getLong("id");
+                JSONObject latest=run;
+                for(int i=0;i<180;i++){
+                    ApiResponse rr=api("GET",API+"/actions/runs/"+runId,token,null);
+                    if(rr.code!=200)throw new Exception("AI Director status failed (HTTP "+rr.code+").");
+                    latest=new JSONObject(rr.body);
+                    if("completed".equals(latest.optString("status"))){
+                        if(!"success".equals(latest.optString("conclusion")))throw new Exception("Gemini story workflow ended: "+latest.optString("conclusion")+". Check the Actions log and GEMINI_API_KEY secret.");
+                        break;
+                    }
+                    Thread.sleep(4000);
+                }
+                if(!"completed".equals(latest.optString("status")))throw new Exception("AI Director is still running. Try again shortly.");
+                ApiResponse ar=api("GET",API+"/actions/runs/"+runId+"/artifacts?per_page=20",token,null);
+                if(ar.code!=200)throw new Exception("Story artifact list failed (HTTP "+ar.code+").");
+                JSONArray artifacts=new JSONObject(ar.body).optJSONArray("artifacts");
+                JSONObject chosen=null;
+                if(artifacts!=null)for(int i=0;i<artifacts.length();i++){JSONObject item=artifacts.getJSONObject(i);if(!item.optBoolean("expired",false)&&item.optString("name","").equals("GI-KO-KO-STORY-"+requestId)){chosen=item;break;}}
+                if(chosen==null)throw new Exception("Gemini finished but the story.json artifact is missing.");
+                ApiResponse redir=api("GET",API+"/actions/artifacts/"+chosen.getLong("id")+"/zip",token,null);
+                if(redir.code!=302||redir.location==null)throw new Exception("Could not download the AI Director story result (HTTP "+redir.code+").");
+                HttpURLConnection conn=(HttpURLConnection)new URL(redir.location).openConnection();
+                conn.setConnectTimeout(30000);conn.setReadTimeout(60000);conn.setInstanceFollowRedirects(true);
+                String storyText=null;
+                try(ZipInputStream zin=new ZipInputStream(new BufferedInputStream(conn.getInputStream()))){
+                    ZipEntry entry;while((entry=zin.getNextEntry())!=null){
+                        if(!entry.isDirectory()&&entry.getName().toLowerCase(Locale.US).endsWith("story.json")){
+                            ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buf=new byte[8192];int n;
+                            while((n=zin.read(buf))!=-1)out.write(buf,0,n);
+                            storyText=out.toString("UTF-8");break;
+                        }
+                    }
+                }finally{conn.disconnect();}
+                if(storyText==null)throw new Exception("Downloaded story package did not contain story.json.");
+                JSONObject story=new JSONObject(storyText);
+                main.post(()->applyStoryDraft(story,"Gemini Cloud"));
+            }catch(Exception e){
+                recordException("Gemini Cloud AI Director",e);
+                main.post(()->{appendChatMessage("AI DIRECTOR","Cloud story generation failed: "+e.getMessage());setStatus("AI Director error: "+e.getMessage());if(generationDialog!=null){generationDialog.dismiss();generationDialog=null;}setBusy(false);});
             }
-            appendChatMessage("AI DIRECTOR","Storyboard draft completed. Review the project details below, then save your draft or start cloud render.");
-            titleInput.setText(story.optString("title","Untitled Story"));
-            characterInput.setText(story.optString("character_bible",""));
-            animationCode=story.optString("animation_code","");
-            JSONArray sc=story.optJSONArray("scenes");StringBuilder sb=new StringBuilder();
-            if(sc!=null)for(int i=0;i<sc.length();i++)sb.append(sc.optString(i)).append("\n");
-            sceneInput.setText(sb.toString());
-            JSONArray ds=story.optJSONArray("dialogue");StringBuilder db=new StringBuilder();
-            if(ds!=null)for(int i=0;i<ds.length();i++){JSONObject d=ds.optJSONObject(i);db.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}
-            dialogueInput.setText(db.toString());
-            setBusy(false);if(generationDialog!=null){generationDialog.dismiss();generationDialog=null;}setStatus("AI story draft ready via "+provider+". Review and edit before rendering.");
-        });
+        }).start();
+    }
+    private void applyStoryDraft(JSONObject story,String provider){
+        titleInput.setText(story.optString("title","Untitled Story"));
+        characterInput.setText(story.optString("character_bible",""));
+        animationCode=story.optString("animation_code","");
+        JSONArray scenes=story.optJSONArray("scenes");StringBuilder sceneText=new StringBuilder();
+        if(scenes!=null)for(int i=0;i<scenes.length();i++)sceneText.append(scenes.optString(i)).append("\n");
+        sceneInput.setText(sceneText.toString());
+        JSONArray dialogue=story.optJSONArray("dialogue");StringBuilder dialogueText=new StringBuilder();
+        if(dialogue!=null)for(int i=0;i<dialogue.length();i++){JSONObject d=dialogue.optJSONObject(i);if(d!=null)dialogueText.append(d.optString("english","")).append(" | ").append(d.optString("myanmar","")).append("\n");}
+        dialogueInput.setText(dialogueText.toString());
+        appendChatMessage("AI DIRECTOR","Storyboard ready via "+provider+". "+(scenes==null?0:scenes.length())+" scenes and "+(dialogue==null?0:dialogue.length())+" dialogue turns. Review the draft and start Cloud Render when ready.");
+        if(generationDialog!=null){generationDialog.dismiss();generationDialog=null;}
+        setBusy(false);setStatus("AI story draft ready via "+provider+". Review and edit before rendering.");
     }
     private void offlineStoryAssist(String prompt){
         String[] ideas=prompt.split("[.!?。！？]+");StringBuilder scenes=new StringBuilder();int count=0;
