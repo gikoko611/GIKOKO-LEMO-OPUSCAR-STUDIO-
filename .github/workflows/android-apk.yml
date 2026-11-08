@@ -11,6 +11,10 @@ on:
       - ".github/workflows/cloud-render.yml"
 permissions:
   contents: write
+
+concurrency:
+  group: gikoko-vid-gen-apk-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
