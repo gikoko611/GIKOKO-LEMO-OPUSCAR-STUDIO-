@@ -134,7 +134,7 @@ public class ProviderManager {
             }catch(Exception e){modelInfo.setText("Media settings error: "+e.getMessage());}
         });
         TextView note=new TextView(activity);note.setText("Note: Media provider settings are stored separately for future image/video/audio adapters. They do not change the current GitHub CPU renderer or create AI video unless a compatible media adapter is implemented.");note.setTextColor(0xffbbbbbb);note.setTextSize(12);note.setPadding(0,12,0,4);root.addView(note);
-        new AlertDialog.Builder(activity).setTitle("G.I KO KO — Provider Control Center").setView(scroll).setPositiveButton("CLOSE",null).show();
+        new AlertDialog.Builder(activity).setTitle("G.I Ko Ko ViD Gen — Provider Control Center").setView(scroll).setPositiveButton("CLOSE",null).show();
     }
     private void putMedia(SharedPreferences.Editor ed,String type,EditText base,EditText model,EditText secret)throws Exception{
         ed.putString("media_"+type+"_base",base.getText().toString().trim()).putString("media_"+type+"_model",model.getText().toString().trim());
