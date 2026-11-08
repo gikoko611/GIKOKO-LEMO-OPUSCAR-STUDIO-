@@ -76,6 +76,14 @@ jobs:
           path: ${{ runner.temp }}/gikoko-full-pipeline-smoke.mp4
           if-no-files-found: error
           retention-days: 3
+      - name: Restore launcher icon uploaded from Termux
+        run: |
+          set -euo pipefail
+          test -s assets/icons/icon-512.png
+          mkdir -p app/src/main/res/drawable-nodpi
+          cp assets/icons/icon-512.png app/src/main/res/drawable-nodpi/ic_launcher.png
+          file app/src/main/res/drawable-nodpi/ic_launcher.png
+          echo "Launcher icon restored from assets/icons/icon-512.png"
       - name: Install Gradle 8.9
         run: |
           curl -L --fail --retry 3 https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip"
