@@ -326,7 +326,7 @@ public class MainActivity extends Activity {
     }
     private void previewSubtitles(){
         StringBuilder preview=new StringBuilder();String[] lines=dialogueInput.getText().toString().split("\\n");
-        for(String line:lines){String[] p=line.split("\\|",2);if(p.length>0&&!p[0].trim().isEmpty())preview.append(p[0].trim()).append("\\n");if(p.length>1&&!p[1].trim().isEmpty())preview.append(p[1].trim()).append("\\n");preview.append("\\n");}
+        for(String line:lines){String[] p=line.split("\\|",2);if(p.length>0&&!p[0].trim().isEmpty())preview.append(p[0].trim()).append("\n");if(p.length>1&&!p[1].trim().isEmpty())preview.append(p[1].trim()).append("\n");preview.append("\n");}
         TextView view=label(preview.length()==0?"No dialogue yet. Add English and Myanmar lines in Dialogue Desk.":preview.toString(),14);view.setTextColor(0xffeffaff);view.setPadding(dp(14),dp(14),dp(14),dp(14));view.setBackground(shape(0xff071923,0xff1d6471,14));
         ScrollView scroll=new ScrollView(this);scroll.addView(view);
         new android.app.AlertDialog.Builder(this).setTitle("SUBTITLE PREVIEW  /  EN + MY").setView(scroll).setPositiveButton("DONE",null).show();
