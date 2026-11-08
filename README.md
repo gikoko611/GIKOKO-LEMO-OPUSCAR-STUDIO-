@@ -34,9 +34,9 @@
 - AI-generated scene code drives scene timing, backgrounds, titles, descriptions and motion cues. Uploaded character images are animated as 2D image layers with FFmpeg transform motion. This does not generate new AI video frames, articulate limbs or synthesize lip-sync; Omni/Veo video APIs are not required.
 
 ### 3. Audio & Subtitle Engine
-- Primary voice engine: Gemini 3.8 Flash TTS (`gemini-3.8-flash-tts`) for English and Burmese.
-- English voice preset: Puck; Myanmar voice preset: Kore (language is automatically detected from the supplied script).
-- Automatic Edge TTS fallback: English `en-US-GuyNeural`, Myanmar `my-MM-ThihaNeural`, when Gemini is not configured or its request fails.
+- Default voice engine: Edge TTS (online, no Gemini TTS API billing); English `en-US-GuyNeural`, Myanmar `my-MM-ThihaNeural`.
+- Bilingual mode generates both English and Myanmar narration from the dialogue desk.
+- Gemini TTS code remains available as an optional engine, but the Facebook free-first workflow sets `TTS_PROVIDER=edge` and does not call Gemini TTS by default.
 - Bilingual voice option.
 - Procedurally synthesized background music and scene accents.
 - English + Myanmar bilingual SRT subtitles (stacked in the same caption cue), embedded as an MP4 soft-subtitle track and included as a separate artifact.
