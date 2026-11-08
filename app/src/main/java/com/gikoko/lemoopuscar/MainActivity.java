@@ -68,6 +68,8 @@ public class MainActivity extends Activity {
     private String animationCode="";
     private String characterReferenceBase64="";
     private String characterMotion="float";
+    private String directorAttachmentText="";
+    private TextView directorAttachmentLabel;
     private TextView characterReferenceStatus;
     private ImageView characterReferencePreview;
     private boolean busy=false,pendingStart=false;
@@ -113,6 +115,7 @@ public class MainActivity extends Activity {
         b.setBackground(new android.graphics.drawable.GradientDrawable(
             android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
             new int[]{themeButtonA,themeButtonB}));
+        ((android.graphics.drawable.GradientDrawable)b.getBackground()).setCornerRadius(dp(9));
         b.setPadding(dp(12),dp(8),dp(12),dp(8));b.setElevation(dp(4));return b;
     }
     private LinearLayout column(){
@@ -120,7 +123,7 @@ public class MainActivity extends Activity {
     }
     private LinearLayout card(LinearLayout parent){
         LinearLayout c=column();c.setPadding(dp(16),dp(13),dp(16),dp(15));
-        c.setBackground(shape(themeCard,themeBorder,20));c.setElevation(dp(5));
+        c.setBackground(shape(themeCard,themeBorder,14));c.setElevation(dp(5));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(13);parent.addView(c,lp);return c;
     }
     private void heading(LinearLayout box,String text,String hint){
@@ -132,7 +135,7 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(0xff07111b);getWindow().setNavigationBarColor(0xff07111b);
         FrameLayout shell=new FrameLayout(this);
         shell.setBackground(new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,new int[]{0xff07111b,0xff0b1d2a,0xff07111b}));
-        shell.addView(new CyberGridView(this),new FrameLayout.LayoutParams(-1,-1));
+        shell.addView(new StudioAtmosphereView(this),new FrameLayout.LayoutParams(-1,-1));
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);
         LinearLayout root=column();root.setPadding(dp(16),dp(12),dp(16),dp(28));scroll.addView(root);shell.addView(scroll);setContentView(shell);
 
@@ -148,18 +151,28 @@ public class MainActivity extends Activity {
         heading(hero,"YOUR STORY. YOUR STUDIO.","Plan a story, direct the scenes, and export a finished MP4.");
         TextView cloud=label("●  CLOUD RENDER ACTIVE     •     480p / 720p",10);cloud.setTextColor(0xff5cf2c5);hero.addView(cloud);
 
-        LinearLayout chat=card(root);heading(chat,"01  /  AI DIRECTOR CHAT","Describe your film naturally. AI prepares the storyboard; cloud rendering creates the MP4.");
-        chatTranscript=new TextView(this);chatTranscript.setTextColor(0xffd8eaf0);chatTranscript.setTextSize(13);chatTranscript.setLineSpacing(dp(3),1f);
-        chatTranscript.setPadding(dp(13),dp(12),dp(13),dp(12));chatTranscript.setBackground(shape(0xff0a1722,0xff1d5360,14));chatTranscript.setMinHeight(dp(90));chatTranscript.setMaxHeight(dp(220));chatTranscript.setVerticalScrollBarEnabled(true);chatTranscript.setMovementMethod(new android.text.method.ScrollingMovementMethod());
+        LinearLayout chat=card(root);
+        LinearLayout chatTitle=new LinearLayout(this);chatTitle.setGravity(Gravity.CENTER_VERTICAL);chatTitle.setOrientation(LinearLayout.HORIZONTAL);chat.addView(chatTitle,new LinearLayout.LayoutParams(-1,-2));
+        TextView geminiMark=label("✦",23);geminiMark.setTextColor(0xff75e7ff);geminiMark.setGravity(Gravity.CENTER);geminiMark.setBackground(shape(0xff123849,0xff35bfc8,9));chatTitle.addView(geminiMark,new LinearLayout.LayoutParams(dp(34),dp(34)));
+        LinearLayout chatHeading=column();LinearLayout.LayoutParams chlp=new LinearLayout.LayoutParams(0,-2,1);chlp.leftMargin=dp(9);chatTitle.addView(chatHeading,chlp);
+        TextView chatName=label("AI DIRECTOR CHAT",15);chatName.setTextColor(themeAccent);chatName.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));chatHeading.addView(chatName);
+        TextView chatHint=label("Gemini-powered creative direction",10);chatHint.setTextColor(themeMuted);chatHeading.addView(chatHint);
+        TextView chatIndex=label("01",11);chatIndex.setTextColor(0xff7debd5);chatTitle.addView(chatIndex);
+        TextView chatDescription=label("Describe your film naturally. AI prepares the storyboard; cloud rendering creates the MP4.",10);chatDescription.setTextColor(themeMuted);chat.addView(chatDescription);
+        ScrollView transcriptScroll=new ScrollView(this);transcriptScroll.setFillViewport(false);transcriptScroll.setVerticalScrollBarEnabled(true);transcriptScroll.setBackground(shape(0xff0a1722,0xff1d5360,10));
+        chatTranscript=new TextView(this);chatTranscript.setTextColor(0xffd8eaf0);chatTranscript.setTextSize(13);chatTranscript.setLineSpacing(dp(3),1f);chatTranscript.setPadding(dp(13),dp(12),dp(13),dp(12));chatTranscript.setTextIsSelectable(true);
         chatTranscript.setText(prefs().getString("chat_history","G.I KO KO AI DIRECTOR\nTell me what kind of story you want to make."));
-        chat.addView(chatTranscript,new LinearLayout.LayoutParams(-1,-2));
+        transcriptScroll.addView(chatTranscript,new ScrollView.LayoutParams(-1,-2));chat.addView(transcriptScroll,new LinearLayout.LayoutParams(-1,dp(220)));
         TextView ql=label("QUICK IDEAS",10);ql.setTextColor(0xff6fe9d0);chat.addView(ql);
         LinearLayout quick=new LinearLayout(this);quick.setOrientation(LinearLayout.HORIZONTAL);chat.addView(quick);
         String[] ideas={"Myanmar comedy","Action adventure","Historical cartoon"};
         for(String idea:ideas){Button q=button(idea);q.setTextSize(10);LinearLayout.LayoutParams qp=new LinearLayout.LayoutParams(0,dp(42),1);qp.rightMargin=dp(5);quick.addView(q,qp);q.setOnClickListener(v->promptInput.setText("Create a "+idea.toLowerCase(Locale.US)+" story with consistent characters, exciting scenes and a memorable ending."));}
-        promptInput=edit("","Message your AI Director…",false);promptInput.setMinLines(3);promptInput.setMaxLines(6);promptInput.setBackground(shape(0xff0a1722,0xff247e7b,16));chat.addView(promptInput);
-        Button send=button("➤  SEND TO AI DIRECTOR");chat.addView(send,new LinearLayout.LayoutParams(-1,dp(50)));
-        send.setOnClickListener(v->{String m=promptInput.getText().toString().trim();if(m.isEmpty()){setStatus("Write a command or story idea first.");return;}appendChatMessage("YOU",m);sendToMasterAi();});
+        promptInput=edit("","Message your AI Director…",false);promptInput.setMinLines(3);promptInput.setMaxLines(6);promptInput.setBackground(shape(0xff0a1722,0xff247e7b,10));chat.addView(promptInput);
+        LinearLayout sendRow=new LinearLayout(this);sendRow.setGravity(Gravity.CENTER_VERTICAL);sendRow.setOrientation(LinearLayout.HORIZONTAL);LinearLayout.LayoutParams srp=new LinearLayout.LayoutParams(-1,dp(48));srp.topMargin=dp(6);chat.addView(sendRow,srp);
+        Button attach=button("＋");attach.setTextSize(22);sendRow.addView(attach,new LinearLayout.LayoutParams(dp(48),-1));attach.setOnClickListener(v->openDirectorAttachmentPicker());
+        Button send=button("➤  SEND TO AI DIRECTOR");LinearLayout.LayoutParams sendLp=new LinearLayout.LayoutParams(0,-1,1);sendLp.leftMargin=dp(8);sendRow.addView(send,sendLp);
+        directorAttachmentLabel=label("No attachment",9);directorAttachmentLabel.setTextColor(themeMuted);chat.addView(directorAttachmentLabel);
+        send.setOnClickListener(v->{String m=promptInput.getText().toString().trim();if(m.isEmpty()&&directorAttachmentText.isEmpty()&&characterReferenceBase64.isEmpty()){setStatus("Write a command or attach a file first.");return;}if(!directorAttachmentText.isEmpty())m+=(m.isEmpty()?"":"\n\n")+"ATTACHED FILE CONTENT:\n"+directorAttachmentText;if(!characterReferenceBase64.isEmpty())m+=(m.isEmpty()?"":"\n\n")+"An image reference is attached to the current project context.";promptInput.setText(m);appendChatMessage("YOU",m);sendToMasterAi();});
 
         LinearLayout tools=card(root);heading(tools,"STUDIO TOOLKIT","10 focused tools for story prep, finishing and cloud delivery.");
         addToolRow(tools,R.drawable.ic_tool_templates,"QUICK CREATIVE WIZARD","Choices, examples, image reference and one-tap actions",()->openCreativeWorkbench(),R.drawable.ic_tool_character,"CHARACTER LAB","Build a consistent character bible",()->openCharacterBuilder());
@@ -209,8 +222,9 @@ public class MainActivity extends Activity {
         buildSettingsPanel();restoreProject();
     }
     private void appendChatMessage(String who,String message){
-        try{String old=prefs().getString("chat_history","G.I KO KO AI DIRECTOR");String next=old+"\n\n"+who+"\n"+message;if(next.length()>9000)next=next.substring(next.length()-9000);prefs().edit().putString("chat_history",next).apply();if(chatTranscript!=null){chatTranscript.setText(next);chatTranscript.post(()->chatTranscript.scrollTo(0,chatTranscript.getLayout()==null?0:chatTranscript.getLayout().getLineTop(chatTranscript.getLineCount())-chatTranscript.getHeight()));}}catch(Exception ignored){}
+        try{String old=prefs().getString("chat_history","G.I KO KO AI DIRECTOR");String next=old+"\n\n"+who+"\n"+message;if(next.length()>9000)next=next.substring(next.length()-9000);prefs().edit().putString("chat_history",next).apply();if(chatTranscript!=null){chatTranscript.setText(next);chatTranscript.post(()->{if(chatTranscript.getParent() instanceof ScrollView)((ScrollView)chatTranscript.getParent()).fullScroll(View.FOCUS_DOWN);});}}catch(Exception ignored){}
     }
+    private void openDirectorAttachmentPicker(){new android.app.AlertDialog.Builder(this).setTitle("ATTACH TO AI DIRECTOR").setItems(new String[]{"＋  Image / photo reference","▤  Text / document file"},(d,w)->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType(w==0?"image/*":"*/*");startActivityForResult(i,w==0?703:704);}).setNegativeButton("CANCEL",null).show();}
 
     private String[] geminiFreeModels(){
         return new String[]{"gemini-3.8-flash","gemini-3.6-flash","gemini-2.5-flash","gemini-2.5-flash-lite"};
@@ -263,17 +277,16 @@ public class MainActivity extends Activity {
         e.setPadding(dp(13),dp(11),dp(13),dp(11));e.setBackground(shape(themeBg,themeBorder,14));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(5);lp.bottomMargin=dp(8);e.setLayoutParams(lp);return e;
     }
-    private static class CyberGridView extends View{
-        private final android.graphics.Paint p=new android.graphics.Paint(3);
-        private long start=System.currentTimeMillis();
-        CyberGridView(Activity a){super(a);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
-        @Override protected void onDraw(android.graphics.Canvas c){
-            super.onDraw(c);float w=getWidth(),h=getHeight();p.setStyle(android.graphics.Paint.Style.STROKE);p.setStrokeWidth(1f);p.setColor(0x2434e8d0);
-            float step=dpStatic(getContext(),28);for(float x=0;x<w;x+=step)c.drawLine(x,0,x,h,p);for(float y=0;y<h;y+=step)c.drawLine(0,y,w,y,p);
-            float phase=((System.currentTimeMillis()-start)%4200)/4200f;p.setStyle(android.graphics.Paint.Style.FILL);
-            p.setColor(0x5535f4cb);for(int i=0;i<12;i++){float x=(i*83f+phase*w*0.35f)%Math.max(1,w);float y=(i*47f+phase*h*0.2f)%Math.max(1,h);c.drawCircle(x,y,1.6f,p);}
-            p.setColor(0x1c20aaff);c.drawRect(0,phase*h, w,phase*h+dpStatic(getContext(),2),p);
-            postInvalidateDelayed(90);
+    private static class StudioAtmosphereView extends View{
+        private final android.graphics.Paint paint=new android.graphics.Paint(3);private final long started=System.currentTimeMillis();
+        StudioAtmosphereView(Activity a){super(a);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
+        @Override protected void onDraw(android.graphics.Canvas canvas){super.onDraw(canvas);float w=getWidth(),h=getHeight(),t=(System.currentTimeMillis()-started)/1000f;
+            // 1) Drifting aurora glow.
+            for(int i=0;i<3;i++){float x=(float)(w*(0.18+0.32*i)+Math.sin(t*0.32+i)*w*0.12),y=(float)(h*(0.22+0.27*i)+Math.cos(t*0.25+i)*h*0.08),r=Math.max(w,h)*0.34f;paint.setShader(new android.graphics.RadialGradient(x,y,r,new int[]{i==1?0x2631d9c8:0x222b8fff,0x002b8fff},null,android.graphics.Shader.TileMode.CLAMP));canvas.drawCircle(x,y,r,paint);}paint.setShader(null);
+            // 2) Floating particles.
+            paint.setStyle(android.graphics.Paint.Style.FILL);for(int i=0;i<26;i++){float x=(i*71f+(t*(9+i%4)*5))%(w+30)-15,y=(i*113f+(float)Math.sin(t*0.55+i)*18)%(h+30)-15;paint.setColor(i%3==0?0x7762f5d2:0x5556bfff);canvas.drawCircle(x,y,1.2f+(i%3)*0.45f,paint);}
+            // 3) Rotating orbital arc.
+            paint.setStyle(android.graphics.Paint.Style.STROKE);paint.setStrokeWidth(1.15f);paint.setColor(0x263ee8dc);float cx=w*0.82f,cy=h*0.18f,r=dpStatic(getContext(),42);canvas.save();canvas.rotate(t*8,cx,cy);canvas.drawArc(cx-r,cy-r,cx+r,cy+r,18,235,false,paint);canvas.restore();paint.setStyle(android.graphics.Paint.Style.FILL);postInvalidateDelayed(70);
         }
         private static float dpStatic(android.content.Context c,float v){return v*c.getResources().getDisplayMetrics().density;}
     }
@@ -322,7 +335,7 @@ public class MainActivity extends Activity {
         row.addView(toolTile(iconB,titleB,descB,actionB),new LinearLayout.LayoutParams(0,dp(94),1));
     }
     private View toolTile(int icon,String title,String description,Runnable action){
-        LinearLayout tile=new LinearLayout(this);tile.setGravity(Gravity.CENTER_VERTICAL);tile.setOrientation(LinearLayout.HORIZONTAL);tile.setPadding(dp(9),dp(8),dp(7),dp(8));tile.setBackground(shape(0xff0b1c29,0xff205064,14));tile.setMinimumHeight(dp(88));tile.setClickable(true);tile.setFocusable(true);
+        LinearLayout tile=new LinearLayout(this);tile.setGravity(Gravity.CENTER_VERTICAL);tile.setOrientation(LinearLayout.HORIZONTAL);tile.setPadding(dp(9),dp(8),dp(7),dp(8));tile.setBackground(shape(0xff0b1c29,0xff205064,10));tile.setMinimumHeight(dp(88));tile.setClickable(true);tile.setFocusable(true);
         ImageView image=new ImageView(this);image.setImageResource(icon);image.setScaleType(ImageView.ScaleType.FIT_CENTER);tile.addView(image,new LinearLayout.LayoutParams(dp(34),dp(34)));
         LinearLayout copy=column();LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1);cp.leftMargin=dp(7);tile.addView(copy,cp);
         TextView t=label(title,10);t.setTextColor(0xff72e9d0);t.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));copy.addView(t);
@@ -536,7 +549,9 @@ public class MainActivity extends Activity {
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
         super.onActivityResult(requestCode,resultCode,data);
         if(resultCode!=RESULT_OK||data==null||data.getData()==null)return;
-        if(requestCode==702){
+        if(requestCode==704){
+            try(InputStream in=getContentResolver().openInputStream(data.getData())){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[4096];int n;while((n=in.read(buffer))!=-1){if(out.size()+n>24000)throw new Exception("Text attachment exceeds 24 KB. Choose a smaller file.");out.write(buffer,0,n);}directorAttachmentText=new String(out.toByteArray(),"UTF-8");String fileName=data.getData().getLastPathSegment();if(directorAttachmentLabel!=null)directorAttachmentLabel.setText("Attached: "+(fileName==null?"document":fileName));setStatus("Text/document attached to AI Director.");}catch(Exception e){setStatus("Attachment failed: "+e.getMessage());}
+        }else if(requestCode==702){
             try(InputStream in=getContentResolver().openInputStream(data.getData())){
                 Bitmap source=BitmapFactory.decodeStream(in);if(source==null)throw new Exception("Unsupported image.");
                 float scale=Math.min(1f,320f/Math.max(source.getWidth(),source.getHeight()));
