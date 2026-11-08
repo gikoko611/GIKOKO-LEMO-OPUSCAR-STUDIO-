@@ -162,7 +162,8 @@ public class MainActivity extends Activity {
         send.setOnClickListener(v->{String m=promptInput.getText().toString().trim();if(m.isEmpty()){setStatus("Write a command or story idea first.");return;}appendChatMessage("YOU",m);sendToMasterAi();});
 
         LinearLayout tools=card(root);heading(tools,"STUDIO TOOLKIT","10 focused tools for story prep, finishing and cloud delivery.");
-        addToolRow(tools,R.drawable.ic_tool_templates,"STARTER TEMPLATES","10 ready-to-edit film blueprints",()->openTemplateGallery(),R.drawable.ic_tool_character,"CHARACTER LAB","Build a consistent character bible",()->openCharacterBuilder());
+        addToolRow(tools,R.drawable.ic_tool_templates,"QUICK CREATIVE WIZARD","Choices, examples, image reference and one-tap actions",()->openCreativeWorkbench(),R.drawable.ic_tool_character,"CHARACTER LAB","Build a consistent character bible",()->openCharacterBuilder());
+        addToolRow(tools,R.drawable.ic_tool_templates,"STARTER TEMPLATES","10 ready-to-edit film blueprints",()->openTemplateGallery(),R.drawable.ic_tool_character,"CHARACTER REFERENCE","Upload and preview your own image",()->openCharacterReferenceLab());
         addToolRow(tools,R.drawable.ic_tool_dialogue,"DIALOGUE DESK","Edit English + Myanmar lines",()->openDialogueBuilder(),R.drawable.ic_tool_subtitles,"SUBTITLE PREVIEW","Preview bilingual captions",()->previewSubtitles());
         addToolRow(tools,R.drawable.ic_tool_audio,"AUDIO LAB","Voice, music and sound effects",()->openAudioLab(),R.drawable.ic_tool_cloud,"CLOUD QUEUE","Check render status and logs",()->{checkLastRun();openRenderCenter();});
         addToolRow(tools,R.drawable.ic_tool_projects,"PROJECT LIBRARY","Open saved projects and drafts",()->openProjectLibrary(),R.drawable.ic_tool_brand,"BRAND KIT","Logo and watermark controls",()->openBrandKit());
@@ -328,6 +329,106 @@ public class MainActivity extends Activity {
         TextView d=label(description,9);d.setTextColor(0xffa6bdc9);d.setMaxLines(2);copy.addView(d);
         tile.setOnClickListener(v->{try{action.run();}catch(Exception e){setStatus("Tool error: "+e.getMessage());}});return tile;
     }
+    private void openCreativeWorkbench(){
+        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
+        LinearLayout panel=column();panel.setPadding(dp(14),dp(8),dp(14),dp(12));scroll.addView(panel);
+        TextView intro=label("BUILD A VIDEO WITHOUT WRITING A LONG PROMPT\nChoose a format, pick a story direction, add a reference image if you want, then preview or execute.",12);
+        intro.setTextColor(0xffb8d5df);panel.addView(intro);
+        LinearLayout presets=card(panel);heading(presets,"01  /  START WITH AN EXAMPLE","Tap an example to prefill the creative brief.");
+        String[] examples={"Myanmar palace comedy","3D cartoon adventure","Cinematic product promo","Myanmar folk tale","Movie recap narration","Motivational Reel"};
+        String[] briefs={
+            "A funny historical story in an ancient Myanmar palace. A clumsy royal guard causes a chain of visual gags, a playful chase and a clever ending.",
+            "A colourful 3D cartoon adventure with a brave young hero, a mysterious forest, teamwork, exciting but family-friendly action and a happy ending.",
+            "A premium product showcase with cinematic lighting, macro detail shots, clear feature highlights and a polished brand ending.",
+            "A Myanmar-inspired folk tale with a magical atmosphere, a kind hero, a meaningful lesson and beautiful village scenery.",
+            "Create an original chronological movie recap narration from my notes. Explain the premise, key turning points and ending in fresh wording.",
+            "An uplifting vertical short with a relatable challenge, a practical message, emotional progress and a hopeful final scene."
+        };
+        LinearLayout exampleGrid=new LinearLayout(this);exampleGrid.setOrientation(LinearLayout.VERTICAL);presets.addView(exampleGrid);
+        final int[] chosenExample={0};
+        TextView selectedExample=label("Selected: "+examples[0],11);selectedExample.setTextColor(0xff61e8c7);presets.addView(selectedExample);
+        for(int i=0;i<examples.length;i+=2){
+            LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);exampleGrid.addView(row);
+            for(int j=i;j<Math.min(i+2,examples.length);j++){
+                final int index=j;Button b=button(examples[j]);b.setTextSize(10);
+                LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(0,dp(46),1);bp.rightMargin=dp(5);row.addView(b,bp);
+                b.setOnClickListener(v->{chosenExample[0]=index;selectedExample.setText("Selected: "+examples[index]);});
+            }
+        }
+        LinearLayout choices=card(panel);heading(choices,"02  /  CREATIVE CONTROLS","Use quick choices instead of typing every production detail.");
+        choices.addView(label("CONTENT TYPE",10));Spinner type=spinner(new String[]{"Comedy / Entertainment","Action Adventure","Historical / Myanmar Culture","Folk Tale / Moral Story","Movie Recap / Story Summary","Product Promotion","Travel Documentary","Motivational / Education","Music Visualizer"});choices.addView(type);
+        choices.addView(label("VISUAL STYLE",10));Spinner visual=spinner(new String[]{"cartoon3d","cartoon2d","cinematic","hybrid"});choices.addView(visual);setSpinnerValue(visual,styleSpinner.getSelectedItem().toString());
+        choices.addView(label("PLATFORM / FRAME",10));Spinner format=spinner(new String[]{"9:16  •  Reels / Shorts / TikTok","16:9  •  YouTube","1:1  •  Square Feed","4:5  •  Portrait Feed"});choices.addView(format);
+        choices.addView(label("VIDEO DURATION",10));Spinner length=spinner(new String[]{"1 minute","2 minutes","3 minutes","5 minutes","10 minutes","15 minutes","30 minutes","Custom — keep current value"});choices.addView(length);setSpinnerValue(length,"2 minutes");
+        choices.addView(label("NARRATION",10));Spinner voice=spinner(new String[]{"Bilingual voice-over","Myanmar voice-over","English voice-over","No voice-over"});choices.addView(voice);
+        choices.addView(label("EXPORT QUALITY",10));Spinner quality=spinner(new String[]{"720p","480p"});choices.addView(quality);setSpinnerValue(quality,resolutionSpinner.getSelectedItem().toString());
+        LinearLayout flags=new LinearLayout(this);flags.setOrientation(LinearLayout.VERTICAL);choices.addView(flags);
+        CheckBox captions=new CheckBox(this);captions.setText("English + Myanmar subtitles");captions.setTextColor(themeText);captions.setChecked(true);flags.addView(captions);
+        CheckBox music=new CheckBox(this);music.setText("Background music");music.setTextColor(themeText);music.setChecked(true);flags.addView(music);
+        CheckBox sfx=new CheckBox(this);sfx.setText("Sound effects");sfx.setTextColor(themeText);sfx.setChecked(true);flags.addView(sfx);
+        LinearLayout ref=card(panel);heading(ref,"03  /  IMAGE REFERENCE","Optional: upload a character, product or visual reference. The image is attached to the project.");
+        ImageView preview=new ImageView(this);preview.setScaleType(ImageView.ScaleType.FIT_CENTER);preview.setBackground(shape(0xff071923,0xff205064,14));
+        LinearLayout.LayoutParams imageLp=new LinearLayout.LayoutParams(-1,dp(132));imageLp.bottomMargin=dp(7);ref.addView(preview,imageLp);
+        if(!characterReferenceBase64.isEmpty()){try{byte[] data=Base64.decode(characterReferenceBase64,Base64.DEFAULT);preview.setImageBitmap(BitmapFactory.decodeByteArray(data,0,data.length));}catch(Exception ignored){}}
+        TextView refStatus=label(characterReferenceBase64.isEmpty()?"No image selected — optional":"Reference image ready",10);refStatus.setTextColor(0xff62edc7);ref.addView(refStatus);
+        Button upload=button("＋  CHOOSE IMAGE / CHARACTER REFERENCE");ref.addView(upload);
+        upload.setOnClickListener(v->{new android.app.AlertDialog.Builder(this).setTitle("ADD VISUAL REFERENCE").setItems(new String[]{"Upload an image","Open Character Reference Lab"},(d,w)->{if(w==0){Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("image/*");startActivityForResult(intent,703);}else openCharacterReferenceLab();}).setNegativeButton("CANCEL",null).show();});
+        LinearLayout previewCard=card(panel);heading(previewCard,"04  /  PREVIEW YOUR BRIEF","Review the choices before sending anything to AI or starting a render.");
+        TextView briefPreview=label("",11);briefPreview.setTextColor(0xffd7edf4);briefPreview.setPadding(dp(12),dp(12),dp(12),dp(12));briefPreview.setBackground(shape(0xff081923,0xff205064,12));previewCard.addView(briefPreview);
+        Runnable refresh=()->{
+            String d=length.getSelectedItem().toString();
+            String summary="TYPE: "+type.getSelectedItem()+"\nSTYLE: "+visual.getSelectedItem()+"\nFORMAT: "+format.getSelectedItem()+"\nLENGTH: "+d+"\nVOICE: "+voice.getSelectedItem()+"\nQUALITY: "+quality.getSelectedItem()+"\nSUBTITLES: "+(captions.isChecked()?"EN + MY":"Off")+"\nMUSIC: "+(music.isChecked()?"On":"Off")+"  •  SFX: "+(sfx.isChecked()?"On":"Off")+"\nIMAGE: "+(characterReferenceBase64.isEmpty()?"Not attached":"Attached");
+            briefPreview.setText(summary);
+        };
+        type.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){refresh.run();}public void onNothingSelected(android.widget.AdapterView<?> p){}});
+        visual.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){refresh.run();}public void onNothingSelected(android.widget.AdapterView<?> p){}});
+        format.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){refresh.run();}public void onNothingSelected(android.widget.AdapterView<?> p){}});
+        length.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){refresh.run();}public void onNothingSelected(android.widget.AdapterView<?> p){}});
+        voice.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){refresh.run();}public void onNothingSelected(android.widget.AdapterView<?> p){}});
+        quality.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){refresh.run();}public void onNothingSelected(android.widget.AdapterView<?> p){}});
+        captions.setOnCheckedChangeListener((b,c)->refresh.run());music.setOnCheckedChangeListener((b,c)->refresh.run());sfx.setOnCheckedChangeListener((b,c)->refresh.run());
+        Button updatePreview=button("↻  UPDATE PREVIEW");previewCard.addView(updatePreview);updatePreview.setOnClickListener(v->refresh.run());refresh.run();
+        final android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this).setTitle("G.I KO KO  /  CREATIVE WORKBENCH").setView(scroll).setPositiveButton("APPLY TO PROJECT",null).setNeutralButton("ASK AI DIRECTOR",null).setNegativeButton("CLOSE",null).create();
+        dialog.setOnShowListener(x->{
+            dialog.getButton(-1).setOnClickListener(v->{
+                applyCreativeWorkbench(examples[chosenExample[0]],briefs[chosenExample[0]],type,visual,format,length,voice,quality,captions,music,sfx);
+                dialog.dismiss();
+            });
+            dialog.getButton(-3).setOnClickListener(v->{
+                applyCreativeWorkbench(examples[chosenExample[0]],briefs[chosenExample[0]],type,visual,format,length,voice,quality,captions,music,sfx);
+                dialog.dismiss();sendToMasterAi();
+            });
+        });
+        dialog.show();
+        refresh.run();
+        dialog.getButton(-2).setText("CLOSE");
+        Button execute=button("▶  APPLY SETTINGS + EXECUTE CLOUD RENDER");
+        LinearLayout.LayoutParams execLp=new LinearLayout.LayoutParams(-1,dp(50));execLp.topMargin=dp(8);previewCard.addView(execute,execLp);
+        execute.setOnClickListener(v->{
+            applyCreativeWorkbench(examples[chosenExample[0]],briefs[chosenExample[0]],type,visual,format,length,voice,quality,captions,music,sfx);
+            dialog.dismiss();saveProject();startRender();
+        });
+    }
+
+    private void applyCreativeWorkbench(String example,String brief,Spinner type,Spinner visual,Spinner format,Spinner length,Spinner voice,Spinner quality,CheckBox captions,CheckBox music,CheckBox sfx){
+        try{
+            String contentType=type.getSelectedItem().toString();
+            String selectedStyle=visual.getSelectedItem().toString();
+            String ratio=format.getSelectedItem().toString().substring(0,3).trim();
+            String duration=length.getSelectedItem().toString().replace(" minute","").replace("s","");
+            if(duration.startsWith("Custom"))duration=durationInput.getText().toString().trim();
+            if(!duration.matches("[0-9]{1,3}"))duration="2";
+            titleInput.setText(example.toUpperCase(Locale.US));
+            promptInput.setText(brief+"\n\nContent type: "+contentType+". Visual style: "+selectedStyle+". Target format: "+ratio+". Create a clear opening, coherent scenes, consistent characters, engaging pacing and a satisfying ending. Use original narration and avoid unsupported factual claims.");
+            setSpinnerValue(styleSpinner,selectedStyle);setSpinnerValue(aspectRatioSpinner,ratio);
+            durationInput.setText(duration);setSpinnerValue(voiceSpinner,voice.getSelectedItem().toString());
+            setSpinnerValue(resolutionSpinner,quality.getSelectedItem().toString());
+            musicCheck.setChecked(music.isChecked());sfxCheck.setChecked(sfx.isChecked());subtitleCheck.setChecked(captions.isChecked());
+            if(sceneInput.getText().toString().trim().isEmpty())sceneInput.setText("Opening — introduce the story and main character\nDevelopment — reveal the goal and first challenge\nTurning point — raise the stakes and change the plan\nFinale — resolve the story with a memorable ending");
+            saveProject();setStatus("Creative Workbench settings applied. Review the project and execute when ready.");
+        }catch(Exception e){recordException("Apply Creative Workbench",e);setStatus("Could not apply workbench settings: "+e.getMessage());}
+    }
+
     private String[][] starterTemplates(){
         return new String[][]{
             {"MYANMAR PALACE COMEDY","A fast-paced historical comedy inside an ancient Myanmar royal palace. Include a clever but clumsy royal guard, a proud king, visual gags, a chase and a warm comic twist.","A loyal royal guard in emerald-and-gold armour, same face and costume in every scene; clever, nervous and kind.","Palace gate — the guard makes a grand entrance\nThrone room — the king gives a strange order\nRoyal kitchen — a runaway feast causes chaos\nPalace courtyard — the guard saves the day by accident","Guard: I have everything under control. | အားလုံးကို ကျွန်တော် ထိန်းချုပ်ထားပါတယ်။\nKing: Then why is the royal goose wearing my crown? | ဒါဆို တော်ဝင်ငန်းက ဘာလို့ ကျွန်တော့်သရဖူကို ဆောင်းထားတာလဲ။","cartoon3d","5"},
